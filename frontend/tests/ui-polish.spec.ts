@@ -46,10 +46,10 @@ test('visual system covers public, member, dealer and moderator pages', async ({
   await capture(page, 'not-found');
   await page.goto('/');
   await signIn(page, '+353860000001');
-  await page.getByRole('link', { name: 'My cars', exact: true }).click();
+  await page.getByRole('link', { name: 'My listings', exact: true }).click();
   await expect(page.locator('.seller-overview')).toBeVisible();
   await capture(page, 'seller-desktop');
-  await page.getByRole('button', { name: 'Add a car', exact: true }).click();
+  await page.getByRole('button', { name: 'Add a listing', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await capture(page, 'upload');
   await page.getByRole('button', { name: 'Close dialog' }).click();

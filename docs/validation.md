@@ -6,15 +6,15 @@ Validated locally on 3 November 2026. These checks establish the scaffold's loca
 | --- | --- |
 | Docker Compose build/start with `--wait` | Passed; Nginx, API, Celery worker, relay, PostgreSQL/PostGIS, PgBouncer, Redis and SeaweedFS healthy; initialization exited successfully |
 | Python runtime | Application images run Linux/Python 3.12 |
-| Backend full suite in Python 3.12 container | **20 passed**: ten domain/provider/realtime tests and ten integration cases covering real Postgres/Redis/S3, discovery/saved pagination, query budgets, reminder isolation, duplicate jobs and audible/silent ffmpeg output |
+| Backend full suite in Python 3.12 container | **24 passed**: thirteen domain/provider/realtime/ranking tests and eleven integration cases, including different user interests, signal caps/decay, diversity, feedback isolation/undo, reset/opt-out and existing real Postgres/Redis/S3/ffmpeg journeys |
 | Backend strict typing | `mypy app`: no issues in 79 source files |
 | Backend lint/format | Ruff check and format check passed |
-| Schema creation/upgrades | Alembic `0001` → `0002` → `0003` → `0004` applied successfully; existing volumes preserved |
+| Schema creation/upgrades | Alembic `0001` → `0002` → `0003` → `0004` → `0005` applied successfully; existing volumes preserved |
 | Schema drift | `alembic check`: no new upgrade operations detected, including the PgBouncer-connected container check |
 | Frontend strict TypeScript | Typecheck and Vite production build passed |
 | Frontend lint/format | ESLint and Prettier checks passed |
-| Frontend component/upload/search/session/realtime tests | **20 passed**: OTP/profile declaration, upload fingerprints, URL filters, session races/loading/unavailability, crash retry, storage corruption/failure, offline drafts, message retry after reopening, viewing retry and realtime recovery |
-| Playwright Chromium | **5 end-to-end scenarios passed**: search/filter links/share/direct adverts/saved list; upload/chat/viewing; interrupted-upload/seller editing/pause/resume/sold; failed processing/retry; public/member/dealer/moderator UI smoke checks |
+| Frontend component/upload/search/session/realtime tests | **24 passed**, including explicit feed consent, local video preview cleanup/metadata and early validation, plus the existing auth/upload/search/recovery checks |
+| Playwright Chromium | **6 end-to-end scenarios passed**: search/share/saved; upload/chat/viewing; interrupted upload and seller controls; failed processing/retry; public/member/dealer/moderator pages; personal-loop consent/watch/hide/undo/reset. Original processing now continues after upload handoff and failures are verified in My cars |
 | Dedicated mobile browser profiles | **6 checks passed** across Android-style Chromium and iPhone-style WebKit: session states; injected render failure/retry; offline advert recovery, file assignment and constrained viewport. Chromium sample-video pause/resume passed; WebKit Windows does not certify iPhone playback |
 | Physical-device acceptance | **Pending**: no connected iPhone or Android hardware facility was available; see the explicit [device checklist and limits](recovery-and-mobile.md) |
 | Responsive regression | Verified 390×844 feed price remains above navigation, checked public/member/dealer/moderator pages for horizontal overflow, verified the locally hosted font loads, and visually reviewed desktop/mobile pages and dialogs |
@@ -60,3 +60,25 @@ The HLS library is split into its own bundle, but Vite still reports a >500 kB u
 No 100k-MAU load test, representative p95 latency test, 4G first-frame measurement, chaos/failover exercise, production restore drill, external provider verification, real-device push test, legal review or public cloud deployment was performed. The optional dashboards are supplied/configuration-checked; paging, managed EU telemetry and PITR need operational setup. Production startup remains intentionally blocked until [the release gates](09-scaffold.md) are implemented and reviewed.
 
 CI is included; its GitHub execution has not been verified in this pass. Local checks exercised its principal lint/type/build/migration/test steps. The updated development stack is left running at [localhost:8080](http://localhost:8080), with existing data volumes preserved. Use `docker compose up -d --build` for a later restart/update.
+
+
+## Loop Marketplace update — 3 November 2026
+
+The product now has a mixed For you feed, Cars/Homes/Golf clubs filters, Something else for uncategorised adverts, category-aware creation/editing/details/saves and an adaptive interest-v2 recommender. Canonical generic routes and old car-link aliases are both covered. See [category design](marketplace.md) and [personal loop](personal-loop.md).
+
+Final local results:
+
+| Check | Result |
+| --- | --- |
+| Backend unit/integration regression | 28 passed; includes PostGIS category discovery, home editing, per-category prices and real-Redis concurrent adaptive-page retries |
+| Frontend unit tests | 30 passed; includes generic forms, old car drafts, URL filters and account/reset-safe receipt queues |
+| Desktop browser journeys | 7 passed in one sequential run; mixed FYP/filters, search/share/saves, golf upload → chat → viewing, personalization controls, interrupted multipart resume/edit/pause, processing retry and page review |
+| Mobile browser profiles | 6 passed across Chromium Pixel 7 and WebKit iPhone 13 profiles |
+| Contracts/build/static checks | OpenAPI/types regenerated; production web build, TypeScript, ESLint, Prettier, Ruff and strict mypy passed |
+| Database | Existing data preserved through migration 0006; Alembic reports no schema drift |
+
+Initial browser runs exposed label-selector ambiguity after renaming the picker and concurrent trace-output collisions. Selectors were corrected, mobile artifacts now use a separate ignored directory, and the final desktop run passed sequentially. Repeated sign-ins reached the development OTP quota; only the temporary local test-IP counter was cleared for the final run. Application limits were not weakened.
+
+Compact desktop autoplay, mobile overflow and clip/control positioning were checked. Current captures: [compact](screenshots/loop-marketplace-compact.png), [mixed desktop](screenshots/loop-marketplace-desktop.png), [golf](screenshots/loop-marketplace-golf.png), [mobile](screenshots/loop-marketplace-mobile.png). Labelled original home/golf/other sample clips supplement the existing car samples. They are not real adverts or stock photos.
+
+Actual phone hardware, representative production scale, recommender quality/conversion experiments and all existing public-release provider/privacy/operations gates remain pending. The earlier public-read smoke figures were not a benchmark of this adaptive recommender. Code remains local, uncommitted and unpushed.

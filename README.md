@@ -1,10 +1,14 @@
-# Motorloop
+# Loop Marketplace
 
-**See the car. Hear its story. Find your next drive nearby.**
+**Local finds. Short videos. One marketplace.**
 
-A video-first local car marketplace: FastAPI modular monolith, React PWA, direct multipart uploads, background HLS processing and durable chat/viewing proposals. Working launch assumptions: Dublin, Ireland; EUR; English; EU production hosting.
+A video-first local marketplace for cars, homes, golf clubs and anything else suitable to sell: FastAPI modular monolith, React PWA, direct multipart uploads, background HLS processing and durable chat/viewing proposals. Working launch assumptions: Dublin, Ireland; EUR; English; EU production hosting.
 
-This folder contains **all ten design deliverables and a runnable local development scaffold**. Real provider integrations, privacy workflows and production operations remain explicit [release gates](docs/09-scaffold.md).
+The default **For you** feed mixes all listings. **Cars**, **Homes** and **Golf clubs** narrow the feed; sellers choose **Something else** when none fits, and those adverts stay in the mixed FYP without a separate category tab. Listing forms, details, saves and the seller dashboard support all four listing types. See [marketplace categories](docs/marketplace.md).
+
+The optional **personal loop** learns while you scroll: completion/skips, replays, saves and seller conversations influence the next unseen page. Category-specific price preferences prevent golf-club prices skewing home recommendations. Loaded pages remain stable on retries. See [recommendations and video uploads](docs/personal-loop.md).
+
+This folder contains **the ten original design deliverables and a runnable local development scaffold**. The original design began with cars; [the current marketplace scope](docs/marketplace.md) extends that foundation. Real provider integrations, privacy workflows and production operations remain explicit [release gates](docs/09-scaffold.md).
 
 ## Run locally
 
@@ -14,7 +18,7 @@ With Docker Desktop running Linux containers, open a terminal in this folder:
 docker compose up --build
 ```
 
-Open **[localhost:8080](http://localhost:8080)** after initialization finishes. The first run downloads images and generates three original illustrated 15-second HLS clips; allow a few minutes. No paid credentials or third-party advert footage is required.
+Open **[localhost:8080](http://localhost:8080)** after initialization finishes. The first run downloads images and generates six original illustrated 15-second HLS clips; allow a few minutes. No paid credentials or third-party advert footage is required.
 
 Background start: `docker compose up -d --build`. Stop: `docker compose down`. Data persists in named volumes; adding `-v` would erase those volumes.
 
@@ -32,18 +36,18 @@ All published development ports bind to loopback. Compose works without copying 
 
 ## Try it
 
-1. Browse videos and filter by make, budget, distance and year; save a car after signing in.
-2. Enter a name and confirm 18+ to sell; upload an owned 15–60 second MP4/MOV of at most 500 MiB and add car details.
+1. Browse the mixed FYP or filter by category, budget and distance; car filters appear in Cars; save a listing after signing in.
+2. Enter a name and confirm 18+ to sell; upload an owned 15–60 second MP4/MOV of at most 500 MiB and choose a category or Something else.
 3. Clean videos publish after processing; suspicious text/hash matches wait for review. Invalid or exhausted work is exposed as failed.
 4. Use a separate browser profile/account to message the seller, propose a public viewing, and accept/decline/counter from the other account. Accepted viewings export to `.ics`.
 5. Report a listing/conversation, block a member, or mark your own live listing sold.
 6. The sample dealer has **Dealer studio** for [CSV inventory](docs/dealer-template.csv) plus matching owned videos; the sample moderator has the review queue.
 
-Discovery now includes keyword search, inventory-derived makes, custom price/year/mileage filters, fuel/gearbox filters and recommended/newest/price sorting. Search settings are kept in the URL. Open **Full advert** or tap a video title for a direct advert page; **Share advert** copies its link. Saved cars can be reopened, removed and paged through. See the [discovery and sharing guide](docs/discovery-sharing.md).
+Discovery includes keyword search, category tabs, inventory-derived car makes, custom price/year/mileage filters, fuel/gearbox filters and recommended/newest/price sorting. Search settings are kept in the URL. Open **Full advert** or tap a video title for a direct advert page; **Share advert** copies its link. Saved listings can be reopened, removed and paged through. See the [discovery and sharing guide](docs/discovery-sharing.md).
 
 The complete interface has a refreshed forest/lime design, self-hosted Manrope typography, consistent cards/forms/dialogs and responsive layouts across buyer, seller, dealer and moderator pages. See the [UI refresh and screenshots](docs/ui-refresh.md). Existing video posters remain; photos are deferred.
 
-**My cars** is the seller dashboard at [localhost:8080/my-cars](http://localhost:8080/my-cars). It includes saved drafts and status filters, editing prices/details, pausing/resuming approved adverts, marking sold, and retrying or replacing failed videos. On mobile, open **Account → Manage your adverts**. See the [seller and upload guide](docs/seller-uploads.md).
+**My listings** is the seller dashboard at [localhost:8080/my-listings](http://localhost:8080/my-listings). It includes saved drafts and status filters, editing prices/details, pausing/resuming approved adverts, marking sold, and retrying or replacing failed videos. On mobile, open **Account → Manage your adverts**. See the [seller and upload guide](docs/seller-uploads.md).
 
 Interrupted uploads resume on the **same advert**, sending only missing parts. Reselect the original video after a refresh; a full-file fingerprint prevents mixing different files. New processed videos retain audio; playback starts muted with an unmute button. Existing silent derivatives need to be regenerated from an audible original to gain sound.
 
@@ -109,3 +113,5 @@ Playwright needs the running stack and Docker CLI. It generates an original clip
 Regenerate contracts with `python scripts/export_contracts.py` in `backend/`, then `npm run generate:api` and `npx prettier --write src/api/generated.ts` in `frontend/`. Add migrations for schema changes; do not regenerate the immutable `0001` snapshot.
 
 Optional dashboards: `docker compose -f compose.yaml -f compose.observability.yaml up -d`. Grafana uses `localhost:3000`, Prometheus `localhost:9090`; alert delivery and production telemetry destinations are not configured. Availability, 4G playback and 100k-MAU targets require further real-device/load validation.
+
+The local folder, Compose project, database and draft-storage prefixes retain their existing `motorloop` names so upgrading does not detach existing data. The product name is **Loop Marketplace**.

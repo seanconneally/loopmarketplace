@@ -92,7 +92,7 @@ test('retrying a message after a lost response reuses its operation key', async 
   fireEvent.click(await screen.findByRole('button', { name: /Seller a/ }));
   fireEvent.change(screen.getByLabelText('Your message'), { target: { value: 'Can I view it?' } });
   fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
-  await screen.findByText('Couldn’t reach Motorloop. Check your connection and try again.');
+  await screen.findByText('Couldn’t reach Loop Marketplace. Check your connection and try again.');
   expect(screen.getByLabelText('Your message')).toHaveValue('Can I view it?');
   cleanup();
   mount();
@@ -131,7 +131,7 @@ test('retrying a viewing proposal after a lost response keeps the same operation
     target: { value: 'Dundrum main entrance' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Send proposal' }));
-  await screen.findByText('Couldn’t reach Motorloop. Check your connection and try again.');
+  await screen.findByText('Couldn’t reach Loop Marketplace. Check your connection and try again.');
   await waitFor(() => expect(screen.getByRole('button', { name: 'Send proposal' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Send proposal' }));
   await waitFor(() =>

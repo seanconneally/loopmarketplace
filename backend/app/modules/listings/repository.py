@@ -81,12 +81,17 @@ class ListingRepository:
         )
 
     async def edit(
-        self, listing: Listing, values: dict[str, object], car: dict[str, object]
+        self, listing: Listing, values: dict[str, object], car: dict[str, object] | None
     ) -> None:
         for name, value in values.items():
             setattr(listing, name, value)
         details = await self.car(listing.id)
-        assert details is not None
-        for name, value in car.items():
-            setattr(details, name, value)
+        if car is None:
+            if details:
+                await self.session.delete(details)
+        elif details is None:
+            self.session.add(CarDetails(listing_id=listing.id, **car))
+        else:
+            for name, value in car.items():
+                setattr(details, name, value)
         await self.session.flush()

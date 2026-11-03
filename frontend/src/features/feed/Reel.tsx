@@ -1,8 +1,10 @@
+import { flushSignals, registerSampler, signalGeneration, signal } from './signals';
+import { listingSummary } from '../listing/categories';
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import { Link, useLocation } from 'react-router-dom';
 import { Bookmark, MapPin, MessageCircle, Pause, Play, Volume2, VolumeX } from 'lucide-react';
-import { euros, mutation, request, type Listing } from '../../api/client';
+import { euros, type Listing } from '../../api/client';
 import { useAuth } from '../../shared/Auth';
 
 export function Reel({
@@ -33,14 +35,6 @@ export function Reel({
   const [failed, setFailed] = useState(false);
   const activeCallback = useRef(onActive);
   activeCallback.current = onActive;
-  const eventBuffer = useRef<
-    {
-      client_event_id: string;
-      listing_id: string;
-      event_type: 'watch' | 'impression';
-      value: number;
-    }[]
-  >([]);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -99,40 +93,65 @@ export function Reel({
 
   useEffect(() => {
     if (!visible || !auth.user?.analytics_consent) return;
-    const buffer = eventBuffer.current;
+    const userId = auth.user.id;
+    let lastReported = -1;
+    const generation = signalGeneration();
     let watched = 0;
     let sampledAt = performance.now();
+    let mediaTime = videoRef.current?.currentTime || 0;
+    let started = false;
     const sample = window.setInterval(() => {
       const now = performance.now();
       const video = videoRef.current;
-      if (video && !video.paused && video.readyState >= 3 && document.visibilityState === 'visible')
-        watched += (now - sampledAt) / 1000;
+      if (
+        video &&
+        !video.paused &&
+        video.readyState >= 3 &&
+        document.visibilityState === 'visible'
+      ) {
+        const elapsed = (now - sampledAt) / 1000;
+        const advance =
+          video.currentTime >= mediaTime
+            ? video.currentTime - mediaTime
+            : Math.max(0, (video.duration || 0) - mediaTime + video.currentTime);
+        const actual = Math.min(elapsed, Math.max(0, advance));
+        watched += actual;
+        started ||= actual > 0;
+      }
+      mediaTime = video?.currentTime || 0;
       sampledAt = now;
     }, 250);
-    buffer.push({
-      client_event_id: crypto.randomUUID(),
-      listing_id: listing.id,
-      event_type: 'impression',
-      value: 1,
-    });
+    signal(userId, listing.id, 'impression', 1);
+    const collect = () => {
+      if (generation !== signalGeneration()) return;
+      const duration = videoRef.current?.duration || listing.duration || 0;
+      if (started && Number.isFinite(duration) && duration > 0 && watched > lastReported) {
+        signal(userId, listing.id, 'completion', Math.min(1, watched / duration));
+        const replays = Math.min(2, Math.max(0, watched / duration - 1));
+        if (replays > 0) signal(userId, listing.id, 'replay', replays);
+        lastReported = watched;
+      }
+    };
+    const unregister = registerSampler(collect);
     const flush = () => {
-      const events = buffer.splice(0);
-      if (events.length)
-        void request('/analytics/events', mutation({ events })).catch(() => undefined);
+      collect();
+      void flushSignals();
     };
     const interval = window.setInterval(flush, 10000);
+    const visibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    document.addEventListener('visibilitychange', visibility);
     return () => {
       window.clearInterval(interval);
       window.clearInterval(sample);
-      buffer.push({
-        client_event_id: crypto.randomUUID(),
-        listing_id: listing.id,
-        event_type: 'watch',
-        value: Math.min(60, watched),
-      });
+      document.removeEventListener('visibilitychange', visibility);
+      unregister();
+      if (generation === signalGeneration())
+        signal(userId, listing.id, 'watch', Math.min(60, watched));
       flush();
     };
-  }, [visible, auth.user?.analytics_consent, listing.id]);
+  }, [visible, auth.user?.id, auth.user?.analytics_consent, listing.id, listing.duration]);
 
   return (
     <div className="reel" ref={containerRef}>
@@ -203,20 +222,17 @@ export function Reel({
         </div>
         <h2>
           <Link
-            to={`/cars/${listing.id}`}
+            to={`/listings/${listing.id}`}
             state={{ from: location.pathname + location.search }}
             aria-label={`View ${listing.title}`}
           >
             {listing.title}
           </Link>
         </h2>
-        <p>
-          {listing.car.year} <span>·</span> {listing.car.mileage_km.toLocaleString()} km{' '}
-          <span>·</span> {listing.car.fuel}
-        </p>
+        <p>{listingSummary(listing)}</p>
         <div className="reel-price">
           {euros(listing.price_cents)}
-          <span>See it. Love it. Drive it.</span>
+          <span>See it. Love it. Make it yours.</span>
         </div>
       </div>
       <div className="video-progress">

@@ -120,7 +120,7 @@ export async function uploadVideo(
       }
       if (!saved)
         throw new Error(
-          'Upload interrupted. Your saved parts are safe. Resume here or in My cars with the original file.',
+          'Upload interrupted. Your saved parts are safe. Resume here or in My listings with the original file.',
         );
       showProgress();
     }
@@ -135,7 +135,7 @@ export async function uploadVideo(
     });
   } else if (session.state === 'failed') {
     throw new Error(
-      'Video processing failed. Open My cars to retry processing or replace the video.',
+      'Video processing failed. Open My listings to retry processing or replace the video.',
     );
   }
   options.queued?.();
@@ -148,7 +148,7 @@ export async function uploadVideo(
     if (status.status === 'pending_review') return 'pending_review';
     if (status.status === 'failed')
       throw new Error(
-        'Video processing failed. Open My cars to retry or replace it on this advert.',
+        'Video processing failed. Open My listings to retry or replace it on this advert.',
       );
     await wait(2000, signal);
   }

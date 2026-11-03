@@ -1,4 +1,4 @@
-"""Owned procedural car artwork and silent clips, strictly for local development."""
+"""Original illustrated marketplace samples, strictly for local development."""
 
 import asyncio
 import json
@@ -55,6 +55,62 @@ SEEDS = [
         (189, 65, 51),
     ),
 ]
+# Clearly labelled illustrations let the mixed marketplace be explored locally.
+SEEDS += [
+    (
+        "Sample Dublin townhouse",
+        "",
+        "",
+        2021,
+        0,
+        48500000,
+        "petrol",
+        "manual",
+        "Rathmines",
+        (212, 179, 124),
+    ),
+    (
+        "Sample golf iron set",
+        "",
+        "",
+        2021,
+        0,
+        32000,
+        "petrol",
+        "manual",
+        "Clontarf",
+        (177, 201, 158),
+    ),
+    ("Sample reading chair", "", "", 2021, 0, 8500, "petrol", "manual", "Dundrum", (206, 141, 110)),
+]
+
+
+def marketplace_art(path: Path, category: str) -> None:
+    image = Image.new("RGB", (720, 1280), (28, 53, 43))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((380, 180, 850, 650), fill=(48, 78, 59))
+    draw.rounded_rectangle((42, 110, 678, 1170), radius=32, outline=(110, 137, 96), width=2)
+    draw.text((80, 160), "LOOP MARKETPLACE / SAMPLE INVENTORY", fill=(207, 226, 163))
+    if category == "homes":
+        draw.polygon([(110, 580), (360, 360), (610, 580)], fill=(170, 133, 93))
+        draw.rectangle((150, 580, 570, 940), fill=(218, 197, 158))
+        draw.rectangle((300, 750, 405, 940), fill=(55, 85, 65))
+        for x in (205, 435):
+            draw.rectangle((x, 630, x + 75, 710), fill=(99, 136, 133))
+            draw.line((x + 37, 630, x + 37, 710), fill=(236, 225, 199), width=5)
+    elif category == "golf":
+        draw.ellipse((100, 910, 640, 990), fill=(57, 82, 52))
+        for x in (220, 320, 420):
+            draw.line((x, 400, x + 85, 895), fill=(184, 203, 190), width=13)
+            draw.line((x, 400, x + 16, 495), fill=(54, 68, 59), width=22)
+            draw.rounded_rectangle((x + 55, 870, x + 155, 930), radius=18, fill=(202, 215, 199))
+    else:
+        draw.rounded_rectangle((215, 480, 505, 820), radius=64, fill=(194, 128, 97))
+        draw.rounded_rectangle((170, 730, 550, 900), radius=40, fill=(218, 154, 116))
+        for x in (190, 480):
+            draw.line((x, 850, x, 1010), fill=(155, 122, 81), width=25)
+    draw.text((80, 1080), "ORIGINAL ILLUSTRATION - NOT A REAL ADVERT", fill=(196, 211, 171))
+    image.save(path)
 
 
 def car_art(path: Path, colour: tuple[int, int, int], variation: int) -> None:
@@ -145,11 +201,11 @@ def car_art(path: Path, colour: tuple[int, int, int], variation: int) -> None:
     for offset in range(0, 96, 12):
         draw.line([(551 + offset, 740), (549 + offset, 773)], fill=(63, 78, 67), width=3)
     draw.polygon([(564, 757), (632, 763), (629, 782), (563, 775)], fill=(226, 232, 213))
-    draw.text((570, 763), "MOTORLOOP", fill=(37, 54, 40))
+    draw.text((570, 763), "LOOP MARKETPLACE", fill=(37, 54, 40))
     draw.polygon([(158, 677), (176, 668), (180, 694), (160, 700)], fill=(198, 82, 66))
     draw.polygon([(375, 637), (400, 620), (417, 628), (412, 645)], fill=dark)
     # Small typographic markers make the synthetic nature of demo inventory explicit.
-    draw.text((42, 130), "MOTORLOOP ORIGINAL / SAMPLE INVENTORY", fill=(167, 189, 155))
+    draw.text((42, 130), "LOOP MARKETPLACE ORIGINAL / SAMPLE INVENTORY", fill=(167, 189, 155))
     draw.text(
         (43, 1120), "ORIGINAL ILLUSTRATION - NOT A VEHICLE ADVERTISEMENT", fill=(145, 166, 134)
     )
@@ -263,8 +319,23 @@ async def seed() -> None:
             data = ListingCreate.model_validate(
                 {
                     "title": title,
-                    "description": "Original illustrated sample inventory for local development. A fresh perspective on a familiar favourite — explore the walkaround and try arranging a viewing.",
+                    "description": "Original illustrated sample inventory for local development. Explore the short video and try arranging a viewing. This is not a real advert.",
                     "price_cents": price,
+                    "category": ["cars", "cars", "cars", "homes", "golf", "other"][index],
+                    "attributes": (
+                        {"property_type": "house", "bedrooms": 3, "bathrooms": 2}
+                        if index == 3
+                        else {
+                            "brand": "Sample",
+                            "condition": "good",
+                            "club_type": "irons",
+                            "hand": "right",
+                        }
+                        if index == 4
+                        else {"condition": "good"}
+                        if index == 5
+                        else {}
+                    ),
                     "area": area,
                     "latitude": 53.3498 + index * 0.012,
                     "longitude": -6.2603 + index * 0.009,
@@ -276,11 +347,15 @@ async def seed() -> None:
                         "mileage_km": mileage,
                         "fuel": fuel,
                         "transmission": transmission,
-                    },
+                    }
+                    if index < 3
+                    else None,
                 }
             )
             service = ListingService(session)
-            listing = await service.create(seller_id, data, f"seed-listing-{index}")
+            listing = await service.repo.by_key(
+                seller_id, f"seed-listing-{index}"
+            ) or await service.create(seller_id, data, f"seed-listing-{index}")
             asset_id = uuid5(NAMESPACE_URL, f"motorloop:seed-asset:{index}")
             if await session.get(MediaAsset, asset_id):
                 continue
@@ -288,7 +363,10 @@ async def seed() -> None:
             with TemporaryDirectory() as temporary:
                 folder = Path(temporary)
                 poster, video = folder / "poster.png", folder / "video.mp4"
-                car_art(poster, colour, index)
+                if index < 3:
+                    car_art(poster, colour, index)
+                else:
+                    marketplace_art(poster, data.category)
                 run_ffmpeg(
                     [
                         "-loop",

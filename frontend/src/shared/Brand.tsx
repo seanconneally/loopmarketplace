@@ -3,7 +3,7 @@ export function BrandMark({ className = '' }: { className?: string }) {
     <svg className={className} viewBox="0 0 40 40" fill="none" aria-hidden="true">
       <rect width="40" height="40" rx="13" fill="currentColor" />
       <path
-        d="M10 27V17a4 4 0 0 1 8 0v10-7a4 4 0 0 1 8 0v7m-2-15h7v7m0-7-8 8"
+        d="M12 12v15h15m-8-15h10v10m0-10L18 23"
         stroke="var(--brand-mark-line, #dff47a)"
         strokeWidth="2.8"
         strokeLinecap="round"

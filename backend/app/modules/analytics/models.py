@@ -18,4 +18,5 @@ class Event(Identity, Base):
         CheckConstraint("value >= 0 and value <= 3600", name="event_value"),
         Index("ix_events_time", "created_at", postgresql_using="brin"),
         Index("ix_events_listing", "listing_id", "event_type", "created_at"),
+        Index("ix_events_user_history", "user_id", "created_at", "id"),
     )

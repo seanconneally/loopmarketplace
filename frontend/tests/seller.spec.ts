@@ -22,14 +22,15 @@ async function seller(page: Page) {
   await page.getByRole('button', { name: /Verify & continue/ }).click();
 }
 async function details(page: Page, title: string, file: string | { name: string; mimeType: string; buffer: Buffer }) {
-  await page.getByRole('button', { name: 'Sell a car', exact: true }).click();
-  await page.getByLabel('Car video').setInputFiles(file);
+  await page.getByRole('button', { name: 'Sell something', exact: true }).click();
+  await page.getByLabel('Listing video', { exact: true }).setInputFiles(file);
   await page.getByLabel('Listing title').fill(title);
+  await page.getByRole('combobox', { name: 'Category', exact: true }).selectOption('cars');
   await page.getByLabel('Make', { exact: true }).fill('Toyota');
   await page.getByLabel('Model', { exact: true }).fill('Yaris');
   await page.getByLabel('Mileage (km)').fill('33000');
   await page.getByLabel('Asking price (€)').fill('18000');
-  await page.getByLabel(/I own this video/).check();
+  await page.getByLabel(/I have the right to use this video/).check();
 }
 
 test('lost draft response → interrupted parts → refresh → resume → edit → pause → resume', async ({ page }) => {
@@ -52,9 +53,9 @@ test('lost draft response → interrupted parts → refresh → resume → edit 
   await expect(page.getByRole('alert')).toBeVisible();
   await page.reload();
   await expect(page.locator('.account-button')).toContainText('Dashboard seller');
-  await page.getByRole('button', { name: 'Sell a car', exact: true }).click();
+  await page.getByRole('button', { name: 'Sell something', exact: true }).click();
   await expect(page.getByLabel('Listing title')).toHaveValue(title);
-  await page.getByLabel('Car video').setInputFiles(video);
+  await page.getByLabel('Listing video', { exact: true }).setInputFiles(video);
   let interrupted = true;
   let firstPartRequests = 0;
   await page.route('http://localhost:9000/**', async route => {
@@ -71,15 +72,15 @@ test('lost draft response → interrupted parts → refresh → resume → edit 
   expect(creationKeys[0]).toBe(creationKeys[1]);
   expect(firstPartRequests).toBe(1);
   interrupted = false;
-  await page.goto('/my-cars');
+  await page.goto('/my-listings');
   const card = page.getByRole('article', { name: title, exact: true });
   await expect(card).toHaveCount(1);
   await card.getByRole('button', { name: 'Resume upload', exact: true }).click();
   const wrong = Buffer.from(fs.readFileSync(video)); wrong[wrong.length - 1] = 1;
-  await page.getByLabel('Car video').setInputFiles({ name: 'resumable.mp4', mimeType: 'video/mp4', buffer: wrong });
+  await page.getByLabel('Listing video', { exact: true }).setInputFiles({ name: 'resumable.mp4', mimeType: 'video/mp4', buffer: wrong });
   await page.getByRole('dialog').getByRole('button', { name: 'Resume upload', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Choose the original video');
-  await page.getByLabel('Car video').setInputFiles(video);
+  await page.getByLabel('Listing video', { exact: true }).setInputFiles(video);
   await page.getByRole('dialog').getByRole('button', { name: 'Resume upload', exact: true }).click();
   await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 60000 });
   await expect(card.locator('.seller-status')).toHaveText('Live', { timeout: 150000 });
@@ -87,7 +88,7 @@ test('lost draft response → interrupted parts → refresh → resume → edit 
   expect(firstPartRequests).toBe(1);
   await card.getByRole('button', { name: 'Edit details' }).click();
   await page.getByLabel('Asking price (€)').fill('16500');
-  await page.getByLabel('A little about the car').fill('Price reduced. Full service history.');
+  await page.getByLabel('About this listing').fill('Price reduced. Full service history.');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(card.locator('.seller-price')).toHaveText('€16,500');
   await page.getByRole('link', { name: 'Discover', exact: true }).first().click();
@@ -96,12 +97,12 @@ test('lost draft response → interrupted parts → refresh → resume → edit 
   await expect(page.getByRole('button', { name: 'Unmute video' }).first()).toBeEnabled();
   await page.getByRole('button', { name: 'Unmute video' }).first().click();
   await expect(page.locator('video').first()).toHaveJSProperty('muted', false);
-  await page.getByRole('link', { name: 'My cars', exact: true }).click();
+  await page.getByRole('link', { name: 'My listings', exact: true }).click();
   await card.getByRole('button', { name: 'Pause advert' }).click();
   await expect(card.locator('.seller-status')).toHaveText('Paused');
   await page.getByRole('link', { name: 'Discover', exact: true }).first().click();
   await expect(page.locator('.listing-panel h2')).not.toHaveText(title);
-  await page.getByRole('link', { name: 'My cars', exact: true }).click();
+  await page.getByRole('link', { name: 'My listings', exact: true }).click();
   await card.getByRole('button', { name: 'Resume advert' }).click();
   await expect(card.locator('.seller-status')).toHaveText('Live');
   await page.screenshot({ path: '../docs/screenshots/seller-dashboard.png', fullPage: true });
@@ -117,10 +118,9 @@ test('failed processing can be retried from the retained source', async ({ page 
   const title = `Failed video ${Date.now()}`;
   await details(page, title, { name: 'invalid.mp4', mimeType: 'video/mp4', buffer: Buffer.from('invalid video bytes') });
   await page.getByRole('button', { name: 'Upload & publish' }).click();
-  await expect(page.getByRole('alert')).toContainText('Video processing failed', { timeout: 60000 });
-  await page.getByRole('link', { name: 'Go to My cars' }).click();
+  await page.getByRole('link', { name: 'Manage in My listings' }).click();
   const card = page.getByRole('article', { name: title, exact: true });
-  await expect(card.locator('.seller-status')).toHaveText('Needs attention');
+  await expect(card.locator('.seller-status')).toHaveText('Needs attention', { timeout: 60000 });
   const retried = page.waitForResponse(response => response.url().endsWith('/retry'));
   await card.getByRole('button', { name: 'Retry processing' }).click();
   expect((await retried).status()).toBe(200);

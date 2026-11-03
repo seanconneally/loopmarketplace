@@ -13,7 +13,7 @@ import {
   Sparkles,
   UserRound,
   ChevronDown,
-  CarFront,
+  Package,
   LoaderCircle,
 } from 'lucide-react';
 import { mutation, request, type Conversation, type Listing, type User } from './api/client';
@@ -42,15 +42,20 @@ export default function App() {
   const location = useLocation();
   const online = useOnlineStatus();
   const sessionPending = auth.status === 'checking' || auth.status === 'unavailable';
-  const privatePage = ['/my-cars', '/saved', '/messages', '/dealer', '/moderation'].includes(
-    location.pathname,
-  );
-  const section = location.pathname.startsWith('/cars/')
+  const privatePage = [
+    '/my-cars',
+    '/my-listings',
+    '/saved',
+    '/messages',
+    '/dealer',
+    '/moderation',
+  ].includes(location.pathname);
+  const section = location.pathname.startsWith('/listings/')
     ? 'Advert details'
     : {
         '/': 'Discover',
-        '/saved': 'Saved cars',
-        '/my-cars': 'My cars',
+        '/saved': 'Saved listings',
+        '/my-listings': 'My listings',
         '/messages': 'Messages',
         '/dealer': 'Dealer studio',
         '/moderation': 'Review queue',
@@ -122,10 +127,11 @@ export default function App() {
         Skip to content
       </a>
       <aside className="sidebar">
-        <Link className="brand" to="/" aria-label="Motorloop home">
+        <Link className="brand" to="/" aria-label="Loop Marketplace home">
           <BrandMark className="brand-symbol" />
           <span className="brand-word">
-            motorloop<span className="brand-period">.</span>
+            loop<span className="brand-period">.</span>
+            <small className="brand-subtitle">marketplace</small>
           </span>
         </Link>
         <div className="sidebar-section-label">YOUR MARKETPLACE</div>
@@ -137,7 +143,7 @@ export default function App() {
           </NavLink>
           <NavLink
             to="/saved"
-            title="Saved cars"
+            title="Saved listings"
             onClick={(event) => {
               if (!auth.user) {
                 event.preventDefault();
@@ -146,7 +152,7 @@ export default function App() {
             }}
           >
             <Bookmark size={20} />
-            Saved cars
+            Saved listings
           </NavLink>
           <NavLink
             to="/messages"
@@ -168,9 +174,9 @@ export default function App() {
             </NavLink>
           )}
           {auth.user && (
-            <NavLink to="/my-cars" title="My cars">
-              <CarFront size={20} />
-              My cars
+            <NavLink to="/my-listings" title="My listings">
+              <Package size={20} />
+              My listings
             </NavLink>
           )}
           {auth.user?.role === 'admin' && (
@@ -186,11 +192,11 @@ export default function App() {
             <Sparkles size={22} />
           </span>
           <h3>
-            Your car.
+            Your listing.
             <br />
             In the loop.
           </h3>
-          <p>One walkaround. A better first impression.</p>
+          <p>One short video. A better first impression.</p>
           <button
             onClick={() => {
               if (!auth.user) requireAuth();
@@ -198,7 +204,7 @@ export default function App() {
               else setUpload(true);
             }}
           >
-            Sell your car <ArrowUpRight size={16} />
+            Sell your listing <ArrowUpRight size={16} />
           </button>
         </div>
         <div className="sidebar-bottom">
@@ -210,14 +216,14 @@ export default function App() {
             <span />
             Local development
           </span>
-          <p>© 2026 Motorloop</p>
+          <p>© 2026 Loop Marketplace</p>
         </div>
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <Link to="/" className="mobile-brand" aria-label="Motorloop home">
+          <Link to="/" className="mobile-brand" aria-label="Loop Marketplace home">
             <BrandMark />
-            motorloop<span>.</span>
+            loop<span>.</span>
           </Link>
           <div className="breadcrumb">
             <span className="breadcrumb-home">Marketplace</span>
@@ -273,7 +279,7 @@ export default function App() {
               }}
             >
               <Plus size={16} />
-              Sell a car
+              Sell something
             </button>
           </div>
         </header>
@@ -317,12 +323,35 @@ export default function App() {
             ) : (
               <Routes>
                 <Route
+                  path="/listings/:id"
+                  element={
+                    <ListingPage
+                      requireAuth={requireAuth}
+                      message={(listing) => void message(listing)}
+                    />
+                  }
+                />
+                <Route
                   path="/cars/:id"
                   element={
                     <ListingPage
                       requireAuth={requireAuth}
                       message={(listing) => void message(listing)}
                     />
+                  }
+                />
+                <Route
+                  path="/my-listings"
+                  element={
+                    auth.user ? (
+                      <SellerDashboard
+                        create={() =>
+                          auth.user?.adult_declared ? setUpload(true) : setProfile(true)
+                        }
+                      />
+                    ) : (
+                      <SignedOut signIn={requireAuth} />
+                    )
                   }
                 />
                 <Route
@@ -406,7 +435,7 @@ export default function App() {
           <Compass size={22} />
           <span>Discover</span>
         </NavLink>
-        <NavLink to="/saved" aria-label="Saved cars">
+        <NavLink to="/saved" aria-label="Saved listings">
           <Bookmark size={22} />
           <span>Saved</span>
         </NavLink>
@@ -450,13 +479,13 @@ export default function App() {
         />
       )}
       {profile && auth.user && (
-        <Modal title="Your Motorloop profile" close={() => setProfile(false)}>
+        <Modal title="Your Loop Marketplace profile" close={() => setProfile(false)}>
           <Link
             className="button dark profile-cars"
-            to="/my-cars"
+            to="/my-listings"
             onClick={() => setProfile(false)}
           >
-            <CarFront size={18} />
+            <Package size={18} />
             Manage your adverts
           </Link>
           <p className="muted">Your profile, preferences and permissions. All in one place.</p>
@@ -473,7 +502,7 @@ export default function App() {
             </label>
             <label className="checkbox">
               <input name="adult" type="checkbox" defaultChecked={auth.user.adult_declared} />I am
-              18 or older and can advertise my own car.
+              18 or older and can advertise my own listings.
             </label>
             <label className="checkbox">
               <input
@@ -481,7 +510,7 @@ export default function App() {
                 type="checkbox"
                 defaultChecked={auth.user.analytics_consent}
               />
-              Allow optional feed analytics.
+              Personalise my feed using watch time and interactions.
             </label>
             <button className="button primary">Save profile</button>
             <p className="tiny muted">
@@ -503,9 +532,9 @@ function SignedOut({ signIn }: { signIn: () => void }) {
   return (
     <div className="empty-card">
       <UserRound size={38} />
-      <span className="eyebrow">YOUR MOTORLOOP</span>
+      <span className="eyebrow">YOUR LOOP</span>
       <h1>Make yourself at home.</h1>
-      <p>Sign in to save cars, contact sellers and manage your adverts.</p>
+      <p>Sign in to save listings, contact sellers and manage your adverts.</p>
       <button className="button dark" onClick={signIn}>
         Sign in
       </button>
@@ -538,8 +567,8 @@ function Safety() {
           'Choose a busy, well-lit place during the day. Bring someone with you and tell a friend where you are going.',
         ],
         [
-          'See the car before you pay.',
-          'Never send a deposit to reserve an unseen car. Inspect the vehicle, its identity and the seller’s documents before agreeing a sale.',
+          'See it before you pay.',
+          'Never send a deposit to reserve an unseen listing. Inspect what you’re buying and check the seller’s documents before agreeing a sale.',
         ],
         [
           'Keep the conversation here.',
@@ -560,8 +589,8 @@ function Safety() {
       ))}
       <div className="notice">
         <ShieldCheck size={20} />
-        Motorloop helps you connect. Payments, inspections and ownership transfers happen between
-        you and the seller in person.
+        Loop Marketplace helps you connect. Payments, inspections and ownership transfers happen
+        between you and the seller in person.
       </div>
     </article>
   );

@@ -1,6 +1,8 @@
+import { type Category } from '../listing/categories';
 import type { FeedQuery } from '../../api/client';
 
 export type DiscoveryFilters = {
+  category: Exclude<Category, 'other'> | '';
   q: string;
   make: string;
   min_price: number;
@@ -14,10 +16,11 @@ export type DiscoveryFilters = {
   sort: NonNullable<FeedQuery['sort']>;
 };
 export const defaultFilters: DiscoveryFilters = {
+  category: '',
   q: '',
   make: '',
   min_price: 0,
-  max_price: 100000000,
+  max_price: 2000000000,
   radius_km: 50,
   min_year: 1900,
   max_year: 2100,
@@ -45,10 +48,13 @@ export function readFilters(params: URLSearchParams): DiscoveryFilters {
     transmission = params.get('transmission'),
     sort = params.get('sort');
   const result: DiscoveryFilters = {
+    category: ['cars', 'homes', 'golf'].includes(params.get('category') || '')
+      ? (params.get('category') as DiscoveryFilters['category'])
+      : '',
     q: (params.get('q') || '').trim().split(/\s+/).slice(0, 8).join(' ').slice(0, 100),
     make: (params.get('make') || '').trim().slice(0, 50),
-    min_price: number('min_price', 0, 100000000),
-    max_price: number('max_price', 0, 100000000),
+    min_price: number('min_price', 0, 2000000000),
+    max_price: number('max_price', 0, 2000000000),
     radius_km: number('radius_km', 1, 100),
     min_year: number('min_year', 1900, 2100),
     max_year: number('max_year', 1900, 2100),
@@ -64,6 +70,14 @@ export function readFilters(params: URLSearchParams): DiscoveryFilters {
   };
   if (result.min_price > result.max_price) result.min_price = 0;
   if (result.min_year > result.max_year) result.max_year = 2100;
+  if (result.category && result.category !== 'cars') {
+    result.make = '';
+    result.fuel = '';
+    result.transmission = '';
+    result.min_year = 1900;
+    result.max_year = 2100;
+    result.max_mileage = 3000000;
+  }
   return result;
 }
 
@@ -77,6 +91,7 @@ export function searchParams(filters: DiscoveryFilters): URLSearchParams {
 export function feedQuery(filters: DiscoveryFilters): FeedQuery {
   return {
     ...filters,
+    category: filters.category || undefined,
     q: filters.q || undefined,
     make: filters.make || undefined,
     fuel: filters.fuel || undefined,

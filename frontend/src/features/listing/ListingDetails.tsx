@@ -1,14 +1,12 @@
+import { categoryLabel, listingSummary, listingSpecs } from './categories';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
 import {
   BadgeCheck,
   Bookmark,
-  CalendarDays,
   ChevronRight,
   Flag,
-  Fuel,
-  Gauge,
   MapPin,
   MessageCircle,
   Settings2,
@@ -51,12 +49,12 @@ export function ListingDetails({
         <div>
           <h2>{listing.title}</h2>
           <p>
-            {listing.car.year} · {listing.car.make} {listing.car.model}
+            {categoryLabel(listing.category)} · {listingSummary(listing)}
           </p>
         </div>
         <button
           className={`icon-button ${listing.saved ? 'saved-icon' : ''}`}
-          aria-label={listing.saved ? 'Unsave this car' : 'Save this car'}
+          aria-label={listing.saved ? 'Unsave this listing' : 'Save this listing'}
           disabled={saving}
           onClick={onSave}
         >
@@ -70,31 +68,18 @@ export function ListingDetails({
       {listing.status !== 'live' && (
         <p className="listing-availability" role="status">
           {listing.status === 'sold'
-            ? 'This car has been sold.'
+            ? 'This listing has been sold.'
             : 'This advert is not currently live.'}
         </p>
       )}
       <div className="spec-grid">
-        <div>
-          <CalendarDays />
-          <span>Year</span>
-          <strong>{listing.car.year}</strong>
-        </div>
-        <div>
-          <Gauge />
-          <span>Mileage</span>
-          <strong>{listing.car.mileage_km.toLocaleString()} km</strong>
-        </div>
-        <div>
-          <Fuel />
-          <span>Fuel type</span>
-          <strong>{listing.car.fuel}</strong>
-        </div>
-        <div>
-          <Settings2 />
-          <span>Gearbox</span>
-          <strong>{listing.car.transmission}</strong>
-        </div>
+        {listingSpecs(listing).map(([label, value]) => (
+          <div key={label}>
+            <Settings2 />
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
       </div>
       <div className="seller-card">
         <div className="seller-avatar">{listing.seller.name.slice(0, 2).toUpperCase()}</div>
@@ -110,7 +95,7 @@ export function ListingDetails({
       </div>
       <p className="listing-description">
         {listing.description ||
-          'Get a proper look at your next car. Message the seller to ask a question or arrange a viewing.'}
+          'Get a proper look at your next find. Message the seller to ask a question or arrange a viewing.'}
       </p>
       <div className="location-line">
         <MapPin size={16} />
@@ -157,12 +142,15 @@ export function ListingDetails({
       <div className="listing-link-actions">
         <ShareAdvert id={listing.id} title={listing.title} />
         {!standalone && (
-          <Link to={`/cars/${listing.id}`} state={{ from: location.pathname + location.search }}>
+          <Link
+            to={`/listings/${listing.id}`}
+            state={{ from: location.pathname + location.search }}
+          >
             Full advert <ChevronRight size={14} />
           </Link>
         )}
         {isOwner && (
-          <Link to="/my-cars">
+          <Link to="/my-listings">
             Manage advert <ChevronRight size={14} />
           </Link>
         )}
@@ -173,7 +161,10 @@ export function ListingDetails({
         </div>
         <div>
           <strong>A good deal starts with a safe viewing.</strong>
-          <p>Meet in a busy public place. Inspect the car before paying. Never send a deposit.</p>
+          <p>
+            Check the item, ownership and seller before paying. For property, verify documents with
+            a qualified professional.
+          </p>
         </div>
       </div>
       <button
@@ -190,7 +181,7 @@ export function ListingDetails({
         A little more real.
         <br />
         <span>A lot more local.</span>
-        <span className="mini-brand">m↗</span>
+        <span className="mini-brand">l↗</span>
       </div>
       {report && (
         <Modal title="Report this listing" close={() => setReport(false)}>

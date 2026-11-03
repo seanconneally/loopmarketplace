@@ -1,3 +1,4 @@
+import { setSignalOwner } from '../features/feed/signals';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { request, restoreSession, setToken, type AuthResult, type User } from '../api/client';
 import { useOnlineStatus } from './useOnlineStatus';
@@ -42,8 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
     };
   }, [attempt, online]);
+  useEffect(() => {
+    setSignalOwner(user?.analytics_consent ? user.id : null);
+  }, [user?.id, user?.analytics_consent]);
   const signIn = (data: AuthResult) => {
     version.current++;
+    setSignalOwner(data.user.analytics_consent ? data.user.id : null);
     setToken(data.access_token);
     updateUser(data.user);
     setStatus('authenticated');
@@ -52,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await request('/auth/logout', { method: 'POST' });
     version.current++;
     if (user) clearMemberDrafts(user.id);
+    setSignalOwner(null);
     setToken(null);
     updateUser(null);
     setStatus('signed-out');
@@ -64,7 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         retrySession: () => retry((value) => value + 1),
         signIn,
         signOut,
-        updateUser,
+        updateUser: (member) => {
+          setSignalOwner(member.analytics_consent ? member.id : null);
+          updateUser(member);
+        },
       }}
     >
       {children}

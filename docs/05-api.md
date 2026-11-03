@@ -108,6 +108,8 @@ The inspected OTP implementation limits requests to ten per IP per ten minutes, 
 
 ## WebSocket protocol
 
+Personal loop additions: authenticated `PUT /feed/feedback` with `{listing_id}` hides an advert, `DELETE /feed/feedback/{listing_id}` undoes that member's dismissal, and `DELETE /feed/preferences` resets their learning cutoff. Analytics also accepts `completion` values from zero to one. Strong save/message/negative signals come from authorized server actions rather than client analytics. See [personal loop contracts and ranking](personal-loop.md).
+
 Gateway path: **`/ws`**. First obtain a one-use ticket over authenticated REST, open a same-origin WebSocket, and send the ticket as the **first frame**, not a query parameter. The first frame must arrive within ten seconds; the ticket expires after thirty. The gateway checks Origin, atomically consumes the ticket, validates current session/account state, subscribes only to the authenticated user's channel and revalidates idle access every fifteen seconds by default (`WEBSOCKET_AUTH_INTERVAL`, 1–30 seconds). Conversation events also recheck current membership/block policy. Invalid access closes with policy-violation code `1008`; reconnect with jittered backoff and a fresh ticket. On connection, the client refetches durable cached state and uses a 45-second silence watchdog. The client sends no other application frames after authentication.
 
 ```json
@@ -129,3 +131,7 @@ The implemented event shape is a discriminated `{type, data}` object serialized 
 `ListingStatus` uses draft, processing, pending_review, live, sold, failed and removed in local service transitions. `MessageView` contains `{id, conversation_id, sender_id, body, message_type, viewing_id, warnings, created_at, read_at}`, with nullable viewing/read fields. `ViewingView` contains `{id, conversation_id, proposed_by, starts_at, place, status, revision, history}`. These views exclude hidden account contact fields; message bodies and private meeting details remain participant data. Unknown event types should be ignored safely and trigger no mutation.
 
 A richer production event envelope should add stable `event_id`, `occurred_at`, `schema_version` and entity revision so clients can deduplicate, observe lag and evolve schemas. Until present in producers, those fields are **planned**, not guaranteed. Persistent history plus REST polling is the compatibility path when a browser, proxy or Redis connection drops.
+
+## Current marketplace contracts
+
+Listing creation/editing accepts cars, homes, golf or other. Car is nullable and required only for cars; attributes contains validated category facts. Feed category accepts cars/homes/golf or omission for the mixed FYP; other has no browse filter. Playback analytics also accepts bounded replay and recent occurred_at timestamps. Generated OpenAPI and frontend types are current; see [category design](marketplace.md) and [personal loop](personal-loop.md).

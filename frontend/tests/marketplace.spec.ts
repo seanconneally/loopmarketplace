@@ -21,7 +21,7 @@ test.beforeAll(() => {
 
 test('upload → feed → message → viewing', async ({ page, browser }) => {
   const sellerPhone = `+35385${String(Date.now()).slice(-7)}`;
-  const title = `Playwright car ${Date.now()}`;
+  const title = `Playwright golf clubs ${Date.now()}`;
   await page.goto('/');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.getByLabel('Phone number').fill(sellerPhone);
@@ -30,16 +30,16 @@ test('upload → feed → message → viewing', async ({ page, browser }) => {
   await page.getByLabel('Your name').fill('Playwright seller');
   await page.getByLabel(/I am 18/).check();
   await page.getByRole('button', { name: /Verify & continue/ }).click();
-  await page.getByRole('button', { name: 'Sell a car', exact: true }).click();
-  await page.getByLabel('Car video').setInputFiles(path.resolve('tests/fixtures/walkaround.mp4'));
+  await page.getByRole('button', { name: 'Sell something', exact: true }).click();
+  await page.getByLabel('Listing video', { exact: true }).setInputFiles(path.resolve('tests/fixtures/walkaround.mp4'));
   await page.getByLabel('Listing title').fill(title);
-  await page.getByLabel('Make', { exact: true }).fill('Toyota');
-  await page.getByLabel('Model', { exact: true }).fill('Yaris');
-  await page.getByLabel('Mileage (km)').fill('33000');
-  await page.getByLabel('Asking price (€)').fill('18000');
-  await page.getByLabel(/I own this video/).check();
+  await page.getByRole('combobox', { name: 'Category', exact: true }).selectOption('golf');
+  await page.getByLabel('Brand', { exact: true }).fill('Mizuno');
+  await page.getByLabel('Club type').selectOption('irons');
+  await page.getByLabel('Asking price (€)').fill('320');
+  await page.getByLabel(/I have the right to use this video/).check();
   await page.getByRole('button', { name: 'Upload & publish' }).click();
-  await expect(page.getByText('You’re in the loop. Your car is live!')).toBeVisible({
+  await expect(page.getByText('Your upload is saved. Processing is continuing in the background.')).toBeVisible({
     timeout: 150000,
   });
   await page.getByRole('button', { name: 'Back to the loop' }).click();
@@ -57,9 +57,9 @@ test('upload → feed → message → viewing', async ({ page, browser }) => {
   await buyer.getByRole('button', { name: /Verify & continue/ }).click();
   await expect(buyer.locator('.listing-panel h2')).toHaveText(title);
   await buyer.locator('.message-cta').click();
-  await buyer.getByLabel('Your message').fill('Can I view the car tomorrow?');
+  await buyer.getByLabel('Your message').fill('Can I see the clubs tomorrow?');
   await buyer.getByRole('button', { name: 'Send message' }).click();
-  await expect(buyer.getByText('Can I view the car tomorrow?')).toBeVisible();
+  await expect(buyer.getByText('Can I see the clubs tomorrow?')).toBeVisible();
   await buyer.getByRole('button', { name: 'Propose a viewing' }).click();
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 16);
   await buyer.getByLabel('Date & time (your local timezone)').fill(tomorrow);
@@ -69,7 +69,7 @@ test('upload → feed → message → viewing', async ({ page, browser }) => {
 
   await page.getByRole('link', { name: 'Messages', exact: true }).first().click();
   await page.getByRole('button', { name: /Playwright buyer/ }).click();
-  await expect(page.getByText('Can I view the car tomorrow?')).toBeVisible();
+  await expect(page.getByText('Can I see the clubs tomorrow?')).toBeVisible();
   await page.getByRole('button', { name: 'Accept', exact: true }).click();
   await expect(page.getByText('VIEWING · ACCEPTED')).toBeVisible();
   await expect(buyer.getByText('VIEWING · ACCEPTED')).toBeVisible();

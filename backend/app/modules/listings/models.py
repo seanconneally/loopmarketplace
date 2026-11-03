@@ -12,6 +12,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base, Identity
@@ -25,6 +26,7 @@ class Listing(Identity, Base):
     status: Mapped[str] = mapped_column(String(20), default="draft")
     title: Mapped[str] = mapped_column(String(120))
     description: Mapped[str] = mapped_column(String(3000), default="")
+    attributes: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     price_cents: Mapped[int]
     currency: Mapped[str] = mapped_column(String(3), default="EUR")
     latitude: Mapped[float]

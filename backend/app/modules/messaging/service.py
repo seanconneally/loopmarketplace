@@ -73,6 +73,9 @@ class MessagingService:
         )
         assert conversation is not None
         await self.member(conversation.id, user)
+        from app.modules.analytics.service import AnalyticsService
+
+        await AnalyticsService(self.session).action(user, listing_id, "message")
         return await self._view(conversation, user)
 
     async def _view(self, conversation: Conversation, user: UUID) -> ConversationView:

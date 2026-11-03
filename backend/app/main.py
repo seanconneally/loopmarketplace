@@ -45,7 +45,7 @@ error_responses: dict[int | str, dict[str, Any]] = {
     for code in [400, 401, 403, 404, 409, 410, 413, 422, 429, 500]
 }
 app = FastAPI(
-    title="Motorloop API",
+    title="Loop Marketplace API",
     version="0.1.0",
     lifespan=lifespan,
     responses=error_responses,

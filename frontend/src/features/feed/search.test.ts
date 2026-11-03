@@ -17,11 +17,11 @@ test('search links round-trip filters, including custom budgets', () => {
 test('invalid URL values fall back to usable bounds', () => {
   const filters = readFilters(
     new URLSearchParams(
-      'min_price=999999999&max_price=-1&min_year=2050&max_year=2000&radius_km=oops&fuel=water&sort=__proto__',
+      'min_price=3000000000&max_price=-1&min_year=2050&max_year=2000&radius_km=oops&fuel=water&sort=__proto__',
     ),
   );
   expect(filters.min_price).toBe(0);
-  expect(filters.max_price).toBe(100000000);
+  expect(filters.max_price).toBe(2000000000);
   expect(filters.max_year).toBe(2100);
   expect(filters.radius_km).toBe(50);
   expect(filters.fuel).toBe('');
@@ -35,4 +35,23 @@ test('default filters produce a clean URL and omit empty API strings', () => {
     fuel: undefined,
     transmission: undefined,
   });
+});
+
+test('category filters survive shared links and clear unrelated car constraints', () => {
+  const mixed = readFilters(new URLSearchParams());
+  expect(feedQuery(mixed).category).toBeUndefined();
+  const golf = readFilters(
+    new URLSearchParams('category=golf&make=Toyota&fuel=hybrid&min_year=2020'),
+  );
+  expect(feedQuery(golf)).toMatchObject({
+    category: 'golf',
+    make: undefined,
+    fuel: undefined,
+    min_year: 1900,
+  });
+  expect(searchParams(golf).toString()).toBe('category=golf');
+});
+
+test('uncategorised stock has no separate browse filter', () => {
+  expect(readFilters(new URLSearchParams('category=other')).category).toBe('');
 });

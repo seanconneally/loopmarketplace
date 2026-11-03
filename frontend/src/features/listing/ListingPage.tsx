@@ -33,7 +33,7 @@ export function ListingPage({
   useEffect(() => {
     if (!listing) return;
     const previous = document.title;
-    document.title = `${listing.title} · Motorloop`;
+    document.title = `${listing.title} · Loop Marketplace`;
     return () => {
       document.title = previous;
     };
@@ -59,19 +59,19 @@ export function ListingPage({
   }
   function chat() {
     if (!listing) return;
-    if (listing.seller.id === auth.user?.id) navigate('/my-cars');
+    if (listing.seller.id === auth.user?.id) navigate('/my-listings');
     else message(listing);
   }
   return (
     <section className="advert-page">
       <Link className="advert-back" to={from}>
         <ArrowLeft size={16} />
-        {from.startsWith('/saved') ? 'Back to saved cars' : 'Back to discovery'}
+        {from.startsWith('/saved') ? 'Back to saved listings' : 'Back to discovery'}
       </Link>
       {query.isPending && (
         <div className="empty-card" role="status">
           <div className="spinner" />
-          <h1>Opening your next drive…</h1>
+          <h1>Opening your next find…</h1>
         </div>
       )}
       {query.error && (
@@ -81,7 +81,7 @@ export function ListingPage({
           <p>It may have been paused or removed, or you may not have access.</p>
           <p className="tiny">{query.error.message}</p>
           <Link className="button dark" to="/">
-            Discover more cars
+            Discover more listings
           </Link>
         </div>
       )}

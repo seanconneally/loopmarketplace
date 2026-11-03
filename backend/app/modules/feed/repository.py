@@ -1,17 +1,58 @@
 from datetime import datetime
+from typing import cast as typing_cast
 from uuid import UUID
 
-from sqlalchemy import Integer, and_, cast, delete, func, or_, select, tuple_
+from sqlalchemy import Integer, String, and_, cast, delete, func, or_, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.feed.models import Candidate
+from app.core.db import utcnow
+from app.modules.feed.models import Candidate, FeedDismissal, FeedPreference
 from app.modules.feed.schemas import FeedFilters
 
 
 class FeedRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+
+    async def dismissed(self, user: UUID, ids: list[UUID]) -> set[UUID]:
+        return set(
+            await self.session.scalars(
+                select(FeedDismissal.listing_id).where(
+                    FeedDismissal.user_id == user, FeedDismissal.listing_id.in_(ids)
+                )
+            )
+        )
+
+    async def dismiss(self, user: UUID, listing: UUID) -> None:
+        await self.session.execute(
+            insert(FeedDismissal)
+            .values(user_id=user, listing_id=listing, created_at=utcnow())
+            .on_conflict_do_nothing()
+        )
+
+    async def undo_dismiss(self, user: UUID, listing: UUID) -> None:
+        await self.session.execute(
+            delete(FeedDismissal).where(
+                FeedDismissal.user_id == user, FeedDismissal.listing_id == listing
+            )
+        )
+
+    async def cutoff(self, user: UUID) -> datetime | None:
+        return typing_cast(
+            datetime | None,
+            await self.session.scalar(
+                select(FeedPreference.reset_at).where(FeedPreference.user_id == user)
+            ),
+        )
+
+    async def reset(self, user: UUID) -> None:
+        now = utcnow()
+        await self.session.execute(
+            insert(FeedPreference)
+            .values(user_id=user, reset_at=now)
+            .on_conflict_do_update(index_elements=["user_id"], set_={"reset_at": now})
+        )
 
     async def candidates(
         self,
@@ -26,8 +67,11 @@ class FeedRepository:
             Candidate.region_id == filters.region_id,
             func.ST_DWithin(Candidate.location, func.Geography(point), filters.radius_km * 1000),
             Candidate.price_cents.between(filters.min_price, filters.max_price),
-            Candidate.year.between(filters.min_year, filters.max_year),
         )
+        if filters.category:
+            query = query.where(Candidate.category == filters.category)
+        if filters.min_year != 1900 or filters.max_year != 2100:
+            query = query.where(Candidate.year.between(filters.min_year, filters.max_year))
         if filters.make:
             query = query.where(func.lower(Candidate.make) == filters.make.lower())
         if ids is not None:
@@ -45,6 +89,9 @@ class FeedRepository:
                     " ",
                     Candidate.public_data["title"].as_string(),
                     Candidate.make,
+                    Candidate.category,
+                    Candidate.public_data["description"].as_string(),
+                    cast(Candidate.public_data["attributes"], String),
                     car["model"].as_string(),
                     Candidate.public_data["area"].as_string(),
                     car["fuel"].as_string(),
@@ -85,7 +132,11 @@ class FeedRepository:
         return list(
             await self.session.scalars(
                 select(func.min(Candidate.make))
-                .where(Candidate.region_id == "ie-dublin")
+                .where(
+                    Candidate.region_id == "ie-dublin",
+                    Candidate.category == "cars",
+                    Candidate.make.is_not(None),
+                )
                 .group_by(func.lower(Candidate.make))
                 .order_by(func.lower(Candidate.make))
                 .limit(200)

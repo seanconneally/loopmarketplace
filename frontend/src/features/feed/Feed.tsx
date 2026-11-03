@@ -1,3 +1,5 @@
+import { flushSignals } from './signals';
+import { categories } from '../listing/categories';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -6,6 +8,7 @@ import { ArrowDown, ArrowUp, RotateCw, Search, SlidersHorizontal, X } from 'luci
 import { euros, fetchFeed, request, type Listing } from '../../api/client';
 import { useAuth } from '../../shared/Auth';
 import { Reel } from './Reel';
+import { TuneFeed } from './TuneFeed';
 import { ListingDetails } from '../listing/ListingDetails';
 import { PageHeading } from '../../shared/PageHeading';
 import {
@@ -50,14 +53,15 @@ export function Feed(props: Props) {
     update({
       min_price: Math.round(Number(data.get('min_price')) * 100),
       max_price: Math.round(Number(data.get('max_price')) * 100),
-      min_year: Number(data.get('min_year')),
-      max_year: Number(data.get('max_year')),
-      max_mileage: Number(data.get('max_mileage')),
-      fuel: String(data.get('fuel')) as DiscoveryFilters['fuel'],
-      transmission: String(data.get('transmission')) as DiscoveryFilters['transmission'],
+      min_year: Number(data.get('min_year') ?? 1900),
+      max_year: Number(data.get('max_year') ?? 2100),
+      max_mileage: Number(data.get('max_mileage') ?? 3000000),
+      fuel: String(data.get('fuel') ?? '') as DiscoveryFilters['fuel'],
+      transmission: String(data.get('transmission') ?? '') as DiscoveryFilters['transmission'],
     });
   }
   const chips: { key: keyof DiscoveryFilters; text: string }[] = [];
+  if (filters.category) chips.push({ key: 'category', text: categories[filters.category].label });
   if (filters.q) chips.push({ key: 'q', text: `“${filters.q}”` });
   if (filters.make) chips.push({ key: 'make', text: filters.make });
   if (filters.min_price) chips.push({ key: 'min_price', text: `From ${euros(filters.min_price)}` });
@@ -71,7 +75,12 @@ export function Feed(props: Props) {
     chips.push({ key: 'max_mileage', text: `Under ${filters.max_mileage.toLocaleString()} km` });
   if (filters.radius_km !== 50)
     chips.push({ key: 'radius_km', text: `Within ${filters.radius_km} km` });
-  const budgetValues = [2000000, 3000000, 5000000];
+  const budgetValues =
+    filters.category === 'homes'
+      ? [30000000, 50000000, 100000000]
+      : filters.category === 'cars'
+        ? [2000000, 3000000, 5000000]
+        : [10000, 50000, 100000];
   return (
     <>
       <PageHeading
@@ -79,10 +88,10 @@ export function Feed(props: Props) {
         eyebrow="A BETTER WAY TO BUY LOCAL"
         title={
           <>
-            Your next drive, <span>in motion.</span>
+            Your next find, <span>in motion.</span>
           </>
         }
-        description="Real walkarounds. Local sellers. A proper look before you meet."
+        description="Real videos. Local sellers. A proper look before you meet."
         action={
           <div className="heading-stamp">
             <span className="live-dot" />
@@ -107,20 +116,51 @@ export function Feed(props: Props) {
           </select>
         </label>
       </div>
+      <nav className="category-tabs" aria-label="Listing categories">
+        <button
+          className={!filters.category ? 'selected' : ''}
+          aria-pressed={!filters.category}
+          onClick={() => update({ ...defaultFilters, q: filters.q })}
+        >
+          For you
+        </button>
+        {Object.entries(categories)
+          .filter(([key]) => key !== 'other')
+          .map(([key, info]) => (
+            <button
+              key={key}
+              className={filters.category === key ? 'selected' : ''}
+              aria-pressed={filters.category === key}
+              onClick={() =>
+                update({
+                  ...defaultFilters,
+                  q: filters.q,
+                  category: key as DiscoveryFilters['category'],
+                })
+              }
+            >
+              {info.label}
+            </button>
+          ))}
+      </nav>
       <div className="filter-bar">
-        <label className="filter-select">
-          <span>Make</span>
-          <select
-            aria-label="Filter by make"
-            value={filters.make}
-            onChange={(event) => update({ make: event.target.value })}
-          >
-            <option value="">All makes</option>
-            {makes.map((make) => (
-              <option key={make}>{make}</option>
-            ))}
-          </select>
-        </label>
+        {filters.category === 'cars' && (
+          <>
+            <label className="filter-select">
+              <span>Make</span>
+              <select
+                aria-label="Filter by make"
+                value={filters.make}
+                onChange={(event) => update({ make: event.target.value })}
+              >
+                <option value="">All makes</option>
+                {makes.map((make) => (
+                  <option key={make}>{make}</option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
         <label className="filter-select">
           <span>Budget</span>
           <select
@@ -128,13 +168,13 @@ export function Feed(props: Props) {
             value={filters.max_price}
             onChange={(event) => update({ max_price: Number(event.target.value), min_price: 0 })}
           >
-            <option value="100000000">Any price</option>
+            <option value="2000000000">Any price</option>
             {budgetValues.map((value) => (
               <option key={value} value={value}>
                 Up to {euros(value)}
               </option>
             ))}
-            {filters.max_price !== 100000000 && !budgetValues.includes(filters.max_price) && (
+            {filters.max_price !== 2000000000 && !budgetValues.includes(filters.max_price) && (
               <option value={filters.max_price}>Up to {euros(filters.max_price)}</option>
             )}
           </select>
@@ -180,7 +220,7 @@ export function Feed(props: Props) {
                 name="min_price"
                 type="number"
                 min="0"
-                max="1000000"
+                max="20000000"
                 step="1"
                 required
                 defaultValue={filters.min_price / 100}
@@ -192,67 +232,71 @@ export function Feed(props: Props) {
                 name="max_price"
                 type="number"
                 min="0"
-                max="1000000"
+                max="20000000"
                 step="1"
                 required
                 defaultValue={filters.max_price / 100}
               />
             </label>
-            <label>
-              Minimum year
-              <input
-                aria-label="Minimum year"
-                name="min_year"
-                type="number"
-                min="1900"
-                max="2100"
-                required
-                defaultValue={filters.min_year}
-              />
-            </label>
-            <label>
-              Maximum year
-              <input
-                name="max_year"
-                type="number"
-                min="1900"
-                max="2100"
-                required
-                defaultValue={filters.max_year}
-              />
-            </label>
-            <label>
-              Fuel type
-              <select name="fuel" aria-label="Fuel type" defaultValue={filters.fuel}>
-                <option value="">Any fuel</option>
-                {['petrol', 'diesel', 'electric', 'hybrid'].map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Transmission
-              <select
-                name="transmission"
-                aria-label="Transmission"
-                defaultValue={filters.transmission}
-              >
-                <option value="">Any gearbox</option>
-                <option value="automatic">Automatic</option>
-                <option value="manual">Manual</option>
-              </select>
-            </label>
-            <label>
-              Maximum mileage (km)
-              <input
-                name="max_mileage"
-                type="number"
-                min="0"
-                max="3000000"
-                required
-                defaultValue={filters.max_mileage}
-              />
-            </label>
+            {filters.category === 'cars' && (
+              <>
+                <label>
+                  Minimum year
+                  <input
+                    aria-label="Minimum year"
+                    name="min_year"
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    required
+                    defaultValue={filters.min_year}
+                  />
+                </label>
+                <label>
+                  Maximum year
+                  <input
+                    name="max_year"
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    required
+                    defaultValue={filters.max_year}
+                  />
+                </label>
+                <label>
+                  Fuel type
+                  <select name="fuel" aria-label="Fuel type" defaultValue={filters.fuel}>
+                    <option value="">Any fuel</option>
+                    {['petrol', 'diesel', 'electric', 'hybrid'].map((value) => (
+                      <option key={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Transmission
+                  <select
+                    name="transmission"
+                    aria-label="Transmission"
+                    defaultValue={filters.transmission}
+                  >
+                    <option value="">Any gearbox</option>
+                    <option value="automatic">Automatic</option>
+                    <option value="manual">Manual</option>
+                  </select>
+                </label>
+                <label>
+                  Maximum mileage (km)
+                  <input
+                    name="max_mileage"
+                    type="number"
+                    min="0"
+                    max="3000000"
+                    required
+                    defaultValue={filters.max_mileage}
+                  />
+                </label>
+              </>
+            )}
           </div>
           <div className="discovery-filter-actions">
             <p className="muted">
@@ -290,6 +334,10 @@ export function Feed(props: Props) {
           {error}
         </p>
       )}
+      <div className="loop-toolbar">
+        <TuneFeed requireAuth={props.requireAuth} />
+        <span>Fresh finds. A little more you.</span>
+      </div>
       <FeedResults
         key={searchParams(filters).toString()}
         {...props}
@@ -316,11 +364,11 @@ function KeywordSearch({ value, submit }: { value: string; submit: (value: strin
     >
       <Search size={19} />
       <input
-        aria-label="Search cars"
+        aria-label="Search listings"
         value={text}
         onChange={(event) => setText(event.target.value)}
         maxLength={100}
-        placeholder="Search cars…"
+        placeholder="Search listings…"
         type="search"
       />
       <button className="button dark">Search</button>
@@ -340,19 +388,30 @@ function FeedResults({
   const [active, setActive] = useState(0),
     [notice, setNotice] = useState(''),
     [saving, setSaving] = useState('');
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [lastHidden, setLastHidden] = useState<Listing | null>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(650);
-  const queryKey = ['feed', searchParams(filters).toString(), auth.user?.id];
+  const queryKey = [
+    'feed',
+    searchParams(filters).toString(),
+    auth.user?.id,
+    auth.user?.analytics_consent,
+  ];
   const query = useInfiniteQuery({
     queryKey,
     initialPageParam: '',
-    queryFn: ({ pageParam }) =>
-      fetchFeed({ ...feedQuery(filters), cursor: pageParam || undefined }),
+    queryFn: async ({ pageParam }) => {
+      if (pageParam) await flushSignals();
+      return fetchFeed({ ...feedQuery(filters), cursor: pageParam || undefined });
+    },
     getNextPageParam: (page) => page.next_cursor || undefined,
   });
   const listings = [
     ...new Map(
-      (query.data?.pages.flatMap((page) => page.items) || []).map((item) => [item.id, item]),
+      (query.data?.pages.flatMap((page) => page.items) || [])
+        .filter((item) => !hidden.has(item.id))
+        .map((item) => [item.id, item]),
     ).values(),
   ];
   const virtualizer = useVirtualizer({
@@ -374,7 +433,7 @@ function FeedResults({
   }, [height, virtualizer]);
   useEffect(() => {
     if (
-      active >= listings.length - 3 &&
+      active >= listings.length - 2 &&
       query.hasNextPage &&
       !query.isFetchingNextPage &&
       !query.isFetchNextPageError
@@ -403,8 +462,25 @@ function FeedResults({
     }
   }
   function chat(listing: Listing) {
-    if (listing.seller.id === auth.user?.id) navigate('/my-cars');
+    if (listing.seller.id === auth.user?.id) navigate('/my-listings');
     else message(listing);
+  }
+  async function dismiss(listing: Listing) {
+    if (!auth.user) {
+      requireAuth();
+      return;
+    }
+    try {
+      await request('/feed/feedback', {
+        method: 'PUT',
+        body: JSON.stringify({ listing_id: listing.id }),
+      });
+      setHidden((current) => new Set([...current, listing.id]));
+      setLastHidden(listing);
+      setActive((index) => Math.max(0, Math.min(index, listings.length - 2)));
+    } catch (problem) {
+      setNotice((problem as Error).message);
+    }
   }
   return (
     <>
@@ -412,6 +488,31 @@ function FeedResults({
         <p className="error" role="alert">
           {notice}
         </p>
+      )}
+      {lastHidden && (
+        <div className="notice feed-feedback" role="status">
+          <span>Advert hidden from your loop.</span>
+          <button
+            className="text-button"
+            onClick={() => {
+              const listing = lastHidden;
+              void request(`/feed/feedback/${listing.id}`, { method: 'DELETE' })
+                .then(async () => {
+                  setHidden((current) => {
+                    const next = new Set(current);
+                    next.delete(listing.id);
+                    return next;
+                  });
+                  setLastHidden(null);
+                  setActive(0);
+                  await client.resetQueries({ queryKey, exact: true });
+                })
+                .catch((problem: Error) => setNotice(problem.message));
+            }}
+          >
+            Undo
+          </button>
+        </div>
       )}
       <div className="feed-layout">
         <div className="feed-column">
@@ -451,7 +552,7 @@ function FeedResults({
             {query.isPending && (
               <div className="feed-empty" role="status">
                 <div className="spinner" />
-                <h2>Finding your next drive…</h2>
+                <h2>Finding your next find…</h2>
               </div>
             )}
             {query.isError && !listings.length && (
@@ -470,7 +571,7 @@ function FeedResults({
             {!query.isPending && !query.isError && !listings.length && (
               <div className="feed-empty">
                 <Search size={32} />
-                <h2>No cars match just yet.</h2>
+                <h2>No listings match just yet.</h2>
                 <p>Try a different search, budget or distance.</p>
                 <button className="button primary" onClick={reset}>
                   Reset filters
@@ -506,13 +607,13 @@ function FeedResults({
           <div className="feed-footer">
             <span>
               {query.isFetchingNextPage
-                ? 'Finding more cars…'
+                ? 'Finding more listings…'
                 : 'See something you like? Start a conversation.'}
             </span>
             <div>
               <button
                 className="icon-button"
-                aria-label="Previous car"
+                aria-label="Previous listing"
                 disabled={active === 0 || !listings.length}
                 onClick={() => virtualizer.scrollToIndex(active - 1, { align: 'start' })}
               >
@@ -520,7 +621,7 @@ function FeedResults({
               </button>
               <button
                 className="icon-button"
-                aria-label="Next car"
+                aria-label="Next listing"
                 disabled={active >= listings.length - 1}
                 onClick={() => virtualizer.scrollToIndex(active + 1, { align: 'start' })}
               >
@@ -528,9 +629,30 @@ function FeedResults({
               </button>
             </div>
           </div>
+          <div className="feed-context-actions">
+            {current && current.seller.id !== auth.user?.id && (
+              <button
+                className="text-button"
+                aria-label="Not interested in this listing"
+                onClick={() => void dismiss(current)}
+              >
+                Not interested
+              </button>
+            )}
+            <button
+              className="text-button"
+              onClick={() => {
+                setActive(0);
+                scroll.current?.scrollTo({ top: 0 });
+                void client.resetQueries({ queryKey, exact: true });
+              }}
+            >
+              Refresh your loop
+            </button>
+          </div>
           {query.isFetchNextPageError && (
             <div className="notice feed-recovery" role="alert">
-              <p>{query.error?.message || 'Could not load more cars.'}</p>
+              <p>{query.error?.message || 'Could not load more listings.'}</p>
               <button
                 className="button dark"
                 onClick={() => {

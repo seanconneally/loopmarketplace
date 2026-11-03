@@ -252,7 +252,7 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
             </button>
           )}
           {conversations.isSuccess && conversationItems.length === 0 && (
-            <p className="muted">Find a car you like and message its seller to get started.</p>
+            <p className="muted">Find a listing you like and message its seller to get started.</p>
           )}
         </aside>
         <section className="chat-panel">
@@ -260,7 +260,7 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
             <div className="chat-placeholder">
               <MessageCircle size={42} />
               <h2>Your next conversation starts here.</h2>
-              <p>Choose a conversation, or find a car and message its seller.</p>
+              <p>Choose a conversation, or find a listing and message its seller.</p>
             </div>
           ) : (
             <>
@@ -517,7 +517,7 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
                 </button>
                 <input
                   aria-label="Your message"
-                  placeholder="Ask about the car…"
+                  placeholder="Ask about the listing…"
                   value={body}
                   onChange={(event) => {
                     const value = event.target.value;

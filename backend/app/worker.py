@@ -80,11 +80,19 @@ async def process_event(event_id: UUID) -> None:
                     UUID(event.payload.get("_delivery_key", str(event.id))), event.payload
                 )
             elif event.event_type == "analytics.received":
+                from app.modules.feed.service import FeedService
+
                 ids = event.payload["seen_ids"]
                 consented = (
                     await UserService(session).active(UUID(event.payload["user_id"]))
                 ).analytics_consent
-                if ids and consented:
+                if (
+                    ids
+                    and consented
+                    and await FeedService(session).accepts_signal_time(
+                        UUID(event.payload["user_id"]), event.created_at
+                    )
+                ):
                     await command("SADD", f"feed:seen:{event.payload['user_id']}", *ids)
                     await client.expire(f"feed:seen:{event.payload['user_id']}", 7 * 86400)
             elif event.event_type == "analytics.withdrawn":

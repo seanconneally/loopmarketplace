@@ -62,7 +62,8 @@ class ListingService:
             "This key was used for a different listing.",
         )
         if new_id:
-            self.session.add(CarDetails(listing_id=listing.id, **data.car.model_dump()))
+            if data.car is not None:
+                self.session.add(CarDetails(listing_id=listing.id, **data.car.model_dump()))
             await emit(self.session, "listing.created", {"listing_id": str(listing.id)})
         await self.session.flush()
         return listing
@@ -97,7 +98,6 @@ class ListingService:
                 "Listing not found.",
             )
         car = await self.repo.car(listing.id)
-        assert car is not None
         media = await MediaService(self.session).playable(listing.id)
         return ListingView(
             id=listing.id,
@@ -109,7 +109,8 @@ class ListingService:
             area=listing.area,
             category=listing.category,
             region_id=listing.region_id,
-            car=CarInput.model_validate(car),
+            car=CarInput.model_validate(car) if car else None,
+            attributes=listing.attributes,
             seller=await UserService(self.session).seller(listing.seller_id),
             playback_url=media.playback_url if media else None,
             poster_url=media.poster_url if media else None,
@@ -184,6 +185,9 @@ class ListingService:
             await self.session.execute(
                 insert(Save).values(user_id=user, listing_id=listing_id).on_conflict_do_nothing()
             )
+            from app.modules.analytics.service import AnalyticsService
+
+            await AnalyticsService(self.session).action(user, listing_id, "save")
         else:
             row = await self.session.get(Save, (user, listing_id))
             if row:
@@ -326,7 +330,9 @@ class ListingService:
             "This advert changed. Reload its latest details before saving.",
         )
         await self.repo.edit(
-            listing, data.model_dump(exclude={"car", "revision"}), data.car.model_dump()
+            listing,
+            data.model_dump(exclude={"car", "revision"}),
+            data.car.model_dump() if data.car else None,
         )
         listing.revision += 1
         review = await ModerationService(self.session).scan_listing(listing.id, False)

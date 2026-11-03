@@ -56,3 +56,7 @@ At measured event growth, create monthly range partitions on `created_at` with a
 For chat, first tune history indexes and archive old conversations. If time partitioning is justified later, use `(conversation_id, created_at, id)` cursors and a separate message-id/idempotency directory to preserve REST lookups, viewing references and deduplication across monthly partitions; migrate foreign-key references to the directory before moving data. Do not simply partition the current table while retaining its existing global keys. An alternative is conversation-hash partitioning when history locality matters more than time-based deletion.
 
 Daily encrypted snapshots, EU PITR and tested restores are production operations described in [the scaling plan](07-scaling-costs.md); local Docker volumes provide persistence only.
+
+## Marketplace extension
+
+Migration 0006 adds listings.attributes JSONB, feed_candidates.category, a region/category/recency index and nullable make/year in the feed projection. Car facts stay in car_details; generic listings never create placeholder car records. The original schema.sql remains the initial release snapshot; Alembic migrations are the current schema authority. See [marketplace categories](marketplace.md).

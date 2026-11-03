@@ -59,7 +59,7 @@ test('mobile video controls, offline form recovery and constrained dialog viewpo
   await page.getByRole('button', {name:'Account', exact:true}).click();
   await page.getByRole('dialog').getByRole('button', {name:'Close dialog'}).click();
   await page.locator('.mobile-nav').getByRole('button', {name:'Sell', exact:true}).click();
-  await page.getByLabel('Car video').setInputFiles({name:'owned-walkaround.mov', mimeType:'video/quicktime', buffer:Buffer.from('selection only, not submitted')});
+  await page.getByLabel('Listing video', { exact: true }).setInputFiles({name:'owned-walkaround.mov', mimeType:'video/quicktime', buffer:Buffer.from('selection only, not submitted')});
   await expect(page.getByRole('dialog')).toContainText('owned-walkaround.mov');
   await context.setOffline(true);
   await expect(page.getByText('You’re offline. Keep editing; reconnect before sending or uploading.')).toBeVisible();

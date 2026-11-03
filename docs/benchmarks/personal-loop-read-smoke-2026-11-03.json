@@ -1,0 +1,11 @@
+{
+  "base": "http://localhost:8080",
+  "requests": 200,
+  "concurrency": 10,
+  "target_requests_per_second": 10,
+  "failures": 0,
+  "elapsed_ms": 19917,
+  "requests_per_second": 10,
+  "latency_ms": { "p50": 15, "p95": 25, "max": 43 },
+  "scope": "Local public-read smoke check with sample inventory after personal-loop changes; not a production or personalized-account capacity certification."
+}

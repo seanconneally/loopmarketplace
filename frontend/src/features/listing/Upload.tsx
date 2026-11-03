@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { UploadCloud, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { mutation, request, type Listing, type ListingInput } from '../../api/client';
 import { Modal } from '../../shared/Modal';
 import { useAuth } from '../../shared/Auth';
@@ -9,6 +9,8 @@ import { listingDetails } from './listingForm';
 import { uploadVideo } from './uploads';
 import { readTextDraft, writeDraft, removeDraft } from '../../shared/draftStorage';
 import { useOnlineStatus } from '../../shared/useOnlineStatus';
+import { VideoPicker } from './VideoPicker';
+import { selectionIssue } from './videoValidation';
 
 type PendingDraft = {
   version: 1;
@@ -36,6 +38,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
   const storageKey = `motorloop.pending-advert.${user?.id}`;
   const [pending, setPending] = useState<PendingDraft | null>(() => readPending(storageKey));
   const [file, setFile] = useState<File | null>(null);
+  const [fileIssue, setFileIssue] = useState('');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -45,7 +48,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!file || busy || !online) return;
+    if (!file || busy || !online || fileIssue) return;
     setError('');
     let saved = pending;
     try {
@@ -76,6 +79,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
       }
       const state = await uploadVideo(saved.listingId!, file, setStatus, {
         signal: abort.signal,
+        waitForProcessing: false,
         queued: () => {
           localStorage.removeItem(storageKey);
           removeDraft(formKey);
@@ -83,7 +87,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
       });
       setResult(
         state === 'live'
-          ? 'You’re in the loop. Your car is live!'
+          ? 'You’re in the loop. Your listing is live!'
           : state === 'pending_review'
             ? 'Your video is ready and awaiting a safety review.'
             : 'Your upload is saved. Processing is continuing in the background.',
@@ -92,7 +96,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
     } catch (problem) {
       setError(
         controller.current?.signal.aborted
-          ? 'Upload paused. Resume with this file here or in My cars.'
+          ? 'Upload paused. Resume with this file here or in My listings.'
           : (problem as Error).message,
       );
     } finally {
@@ -102,15 +106,15 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
 
   return (
     <Modal
-      title={pending ? 'Continue your advert' : 'Let’s get your car in the loop.'}
+      title={pending ? 'Continue your advert' : 'Let’s get your listing in the loop.'}
       close={close}
     >
       {result ? (
         <div className="success-state">
           <CheckCircle2 size={42} />
           <h3>{result}</h3>
-          <Link className="button primary" to="/my-cars" onClick={close}>
-            Manage in My cars
+          <Link className="button primary" to="/my-listings" onClick={close}>
+            Manage in My listings
           </Link>
           <button className="button dark" onClick={close}>
             Back to the loop
@@ -119,12 +123,12 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
       ) : (
         <>
           <p className="muted">
-            A short walkaround gives buyers a proper first look. We keep the sound, too.
+            A short video gives buyers a proper first look. We keep the sound, too.
           </p>
           {pending && (
             <div className="notice">
               Your draft is saved. Choose {pending.fileName} to continue on the same advert. You can
-              edit its details in My cars.
+              edit its details in My listings.
             </div>
           )}
           <form
@@ -141,22 +145,17 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
               setDraftWarning(!writeDraft(formKey, values));
             }}
           >
-            <label className="upload-drop">
-              <UploadCloud size={30} />
-              <strong>{file?.name || 'Choose your walkaround video'}</strong>
-              <span>15–60 seconds · MP4 or MOV · up to 500 MB</span>
-              <input
-                aria-label="Car video"
-                type="file"
-                accept="video/mp4,video/quicktime,.mov"
-                required
-                disabled={busy}
-                onChange={(event) => {
-                  setFile(event.target.files?.[0] || null);
-                  setError('');
-                }}
-              />
-            </label>
+            <VideoPicker
+              file={file}
+              busy={busy}
+              choose={(chosen) => {
+                const issue = chosen ? selectionIssue(chosen) : '';
+                setFileIssue(issue);
+                setError('');
+                setFile(issue ? null : chosen);
+              }}
+              validate={setFileIssue}
+            />
             <ListingFields
               value={pending?.data}
               draft={pending ? undefined : draft}
@@ -168,7 +167,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
               </p>
             )}
             <p className="tiny muted">
-              You can close this window and resume later in My cars. After a refresh, select the
+              You can close this window and resume later in My listings. After a refresh, select the
               original video again.
             </p>
             {status && (
@@ -181,7 +180,12 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
                 {error}
               </p>
             )}
-            <button className="button primary" disabled={busy || !online}>
+            {fileIssue && (
+              <p className="error" role="alert">
+                {fileIssue}
+              </p>
+            )}
+            <button className="button primary" disabled={busy || !online || !!fileIssue}>
               {busy ? 'Working on your video…' : pending ? 'Resume upload' : 'Upload & publish'}
             </button>
             {busy && (
@@ -204,6 +208,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
                   setFormVersion((value) => value + 1);
                   setPending(null);
                   setFile(null);
+                  setFileIssue('');
                   setStatus('');
                   setError('');
                 }}
@@ -211,8 +216,8 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
                 Start another advert
               </button>
             )}
-            <Link to="/my-cars" onClick={close}>
-              Go to My cars
+            <Link to="/my-listings" onClick={close}>
+              Go to My listings
             </Link>
           </form>
         </>

@@ -1,7 +1,8 @@
+import { listingSummary, categoryLabel, type Category } from './categories';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  CarFront,
+  Package,
   Check,
   Film,
   Pause,
@@ -122,21 +123,21 @@ export function SellerDashboard({ create }: { create: () => void }) {
         eyebrow="YOUR SELLER WORKSPACE"
         title={
           <>
-            Your cars. <span>All in one place.</span>
+            Your listings. <span>All in one place.</span>
           </>
         }
         description="Follow your videos, update your details and manage what buyers see."
         action={
           <button className="button dark" onClick={create}>
             <Plus size={16} />
-            Add a car
+            Add a listing
           </button>
         }
       />
       <div className="seller-overview">
         <div>
           <span className="overview-icon">
-            <CarFront size={20} />
+            <Package size={20} />
           </span>
           <div>
             <span>Adverts in this view</span>
@@ -194,7 +195,7 @@ export function SellerDashboard({ create }: { create: () => void }) {
           {error || query.error?.message}
         </p>
       )}
-      {query.isPending && <p role="status">Loading your cars…</p>}
+      {query.isPending && <p role="status">Loading your listings…</p>}
       <div className="seller-grid">
         {items.map((item) => {
           const closed = ['sold', 'removed'].includes(item.status);
@@ -205,7 +206,7 @@ export function SellerDashboard({ create }: { create: () => void }) {
                 {item.poster_url || item.media?.poster_url ? (
                   <img src={item.poster_url || item.media?.poster_url || ''} alt="" />
                 ) : (
-                  <CarFront size={46} />
+                  <Package size={46} />
                 )}
                 <span className={`seller-status status-${item.status}`}>
                   {labels[item.status] || item.status}
@@ -219,18 +220,16 @@ export function SellerDashboard({ create }: { create: () => void }) {
               </div>
               <div className="seller-advert-body">
                 <p className="eyebrow">
-                  {item.area} · {item.car.year}
+                  {item.area} · {categoryLabel(item.category)}
                 </p>
                 <h2>{item.title}</h2>
-                <p className="muted">
-                  {item.car.make} {item.car.model} · {item.car.mileage_km.toLocaleString()} km
-                </p>
+                <p className="muted">{listingSummary(item)}</p>
                 <strong className="seller-price">{euros(item.price_cents)}</strong>
                 <p className="seller-hint">
                   {item.status === 'draft'
                     ? item.media
                       ? 'Your upload is saved. Select the original file to continue.'
-                      : 'Your details are saved. Add a walkaround to publish.'
+                      : 'Your details are saved. Add a video to publish.'
                     : item.status === 'paused'
                       ? 'Hidden from discovery. Resume when you are ready.'
                       : item.status === 'processing'
@@ -328,12 +327,12 @@ export function SellerDashboard({ create }: { create: () => void }) {
           </h2>
           <p>
             {filter === 'all'
-              ? 'Add your car and bring its story to the loop.'
-              : 'Choose another status to see your cars.'}
+              ? 'Add your listing and bring its story to the loop.'
+              : 'Choose another status to see your listings.'}
           </p>
           {filter === 'all' && (
             <button className="button dark" onClick={create}>
-              Add your first car
+              Add your first listing
             </button>
           )}
         </div>
@@ -390,7 +389,7 @@ function EditAdvert({
     const details = listingDetails(event.currentTarget, {
       ...listing,
       rights_confirmed: true,
-      category: 'cars',
+      category: listing.category as Category,
       region_id: 'ie-dublin',
     });
     try {
@@ -412,7 +411,12 @@ function EditAdvert({
           Keep buyers up to date. Changes are checked before your advert appears.
         </p>
         <ListingFields
-          value={{ ...listing, rights_confirmed: true, category: 'cars', region_id: 'ie-dublin' }}
+          value={{
+            ...listing,
+            rights_confirmed: true,
+            category: listing.category as Category,
+            region_id: 'ie-dublin',
+          }}
           disabled={busy}
         />
         {error && (
@@ -485,10 +489,7 @@ function VideoDialog({
     }
   }
   return (
-    <Modal
-      title={restart ? 'A new video. The same advert.' : 'Continue your walkaround.'}
-      close={close}
-    >
+    <Modal title={restart ? 'A new video. The same advert.' : 'Continue your video.'} close={close}>
       <p className="muted">
         {restart
           ? 'Replace the unfinished video on this advert. Previously uploaded parts will be discarded.'
@@ -501,7 +502,7 @@ function VideoDialog({
           <strong>{file?.name || 'Choose your video'}</strong>
           <span>15–60 seconds · MP4 or MOV · up to 500 MB</span>
           <input
-            aria-label="Car video"
+            aria-label="Listing video"
             type="file"
             accept="video/mp4,video/quicktime,.mov"
             required

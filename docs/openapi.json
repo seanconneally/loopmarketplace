@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Motorloop API",
+    "title": "Loop Marketplace API",
     "description": "Local development scaffold. Production deployment is intentionally guarded.",
     "version": "0.1.0"
   },
@@ -3210,6 +3210,385 @@
         }
       }
     },
+    "/api/v1/feed/feedback": {
+      "put": {
+        "tags": [
+          "feed"
+        ],
+        "summary": "Feedback",
+        "operationId": "feedback_api_v1_feed_feedback_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedFeedback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/feed/feedback/{listing_id}": {
+      "delete": {
+        "tags": [
+          "feed"
+        ],
+        "summary": "Undo Feedback",
+        "operationId": "undo_feedback_api_v1_feed_feedback__listing_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "listing_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Listing Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feed/preferences": {
+      "delete": {
+        "tags": [
+          "feed"
+        ],
+        "summary": "Reset Preferences",
+        "operationId": "reset_preferences_api_v1_feed_preferences_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Consistent application error envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/feed": {
       "get": {
         "tags": [
@@ -3223,6 +3602,27 @@
           }
         ],
         "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "cars",
+                    "homes",
+                    "golf"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
           {
             "name": "q",
             "in": "query",
@@ -3294,7 +3694,7 @@
             "schema": {
               "type": "integer",
               "minimum": 0,
-              "default": 100000000,
+              "default": 2000000000,
               "title": "Max Price"
             }
           },
@@ -6437,8 +6837,11 @@
             "enum": [
               "impression",
               "watch",
+              "completion",
               "save",
-              "message"
+              "message",
+              "not_interested",
+              "replay"
             ],
             "title": "Event Type"
           },
@@ -6448,6 +6851,18 @@
             "minimum": 0.0,
             "title": "Value",
             "default": 1
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
           }
         },
         "type": "object",
@@ -6457,6 +6872,20 @@
           "event_type"
         ],
         "title": "EventInput"
+      },
+      "FeedFeedback": {
+        "properties": {
+          "listing_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Listing Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "listing_id"
+        ],
+        "title": "FeedFeedback"
       },
       "FeedOptions": {
         "properties": {
@@ -6585,7 +7014,7 @@
           },
           "price_cents": {
             "type": "integer",
-            "maximum": 100000000.0,
+            "maximum": 2000000000.0,
             "exclusiveMinimum": 0.0,
             "title": "Price Cents"
           },
@@ -6609,7 +7038,12 @@
           },
           "category": {
             "type": "string",
-            "const": "cars",
+            "enum": [
+              "cars",
+              "homes",
+              "golf",
+              "other"
+            ],
             "title": "Category",
             "default": "cars"
           },
@@ -6625,7 +7059,19 @@
             "title": "Rights Confirmed"
           },
           "car": {
-            "$ref": "#/components/schemas/CarInput"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CarInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Attributes"
           }
         },
         "type": "object",
@@ -6635,8 +7081,7 @@
           "area",
           "latitude",
           "longitude",
-          "rights_confirmed",
-          "car"
+          "rights_confirmed"
         ],
         "title": "ListingCreate"
       },
@@ -6683,7 +7128,7 @@
           },
           "price_cents": {
             "type": "integer",
-            "maximum": 100000000.0,
+            "maximum": 2000000000.0,
             "exclusiveMinimum": 0.0,
             "title": "Price Cents"
           },
@@ -6707,7 +7152,12 @@
           },
           "category": {
             "type": "string",
-            "const": "cars",
+            "enum": [
+              "cars",
+              "homes",
+              "golf",
+              "other"
+            ],
             "title": "Category",
             "default": "cars"
           },
@@ -6723,7 +7173,19 @@
             "title": "Rights Confirmed"
           },
           "car": {
-            "$ref": "#/components/schemas/CarInput"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CarInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Attributes"
           },
           "revision": {
             "type": "integer",
@@ -6739,7 +7201,6 @@
           "latitude",
           "longitude",
           "rights_confirmed",
-          "car",
           "revision"
         ],
         "title": "ListingUpdate"
@@ -6784,7 +7245,19 @@
             "title": "Region Id"
           },
           "car": {
-            "$ref": "#/components/schemas/CarInput"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CarInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Attributes"
           },
           "seller": {
             "$ref": "#/components/schemas/SellerView"
@@ -6856,7 +7329,6 @@
           "area",
           "category",
           "region_id",
-          "car",
           "seller"
         ],
         "title": "ListingView"
@@ -7382,7 +7854,19 @@
             "title": "Region Id"
           },
           "car": {
-            "$ref": "#/components/schemas/CarInput"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CarInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Attributes"
           },
           "seller": {
             "$ref": "#/components/schemas/SellerView"
@@ -7485,7 +7969,6 @@
           "area",
           "category",
           "region_id",
-          "car",
           "seller",
           "revision",
           "is_paused",

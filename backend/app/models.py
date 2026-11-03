@@ -3,7 +3,7 @@
 from app.core.outbox import DeadLetter, Outbox
 from app.modules.analytics.models import Event
 from app.modules.auth.models import RefreshSession
-from app.modules.feed.models import Candidate
+from app.modules.feed.models import Candidate, FeedDismissal, FeedPreference
 from app.modules.listings.dealer import DealerImport
 from app.modules.listings.models import CarDetails, Listing, Save
 from app.modules.media.models import MediaAsset
@@ -19,6 +19,8 @@ __all__ = [
     "Event",
     "RefreshSession",
     "Candidate",
+    "FeedDismissal",
+    "FeedPreference",
     "CarDetails",
     "Listing",
     "Save",

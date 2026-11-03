@@ -5,7 +5,7 @@ export function ShareAdvert({ id, title }: { id: string; title: string }) {
   const [copied, setCopied] = useState(false),
     [manual, setManual] = useState(false),
     [busy, setBusy] = useState(false);
-  const url = `${location.origin}/cars/${id}`;
+  const url = `${location.origin}/listings/${id}`;
   async function share() {
     setBusy(true);
     setCopied(false);

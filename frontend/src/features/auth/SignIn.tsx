@@ -46,7 +46,7 @@ export function SignIn({ close }: { close: () => void }) {
   }
   return (
     <Modal
-      title={challenge === null ? 'Welcome to Motorloop.' : 'Verify your number.'}
+      title={challenge === null ? 'Welcome to Loop Marketplace.' : 'Verify your number.'}
       close={close}
     >
       <div className="auth-intro">
@@ -57,7 +57,7 @@ export function SignIn({ close }: { close: () => void }) {
           </span>
           <p>
             {challenge === null
-              ? 'Save the ones you love. Speak to the seller. Find your next drive.'
+              ? 'Save the ones you love. Speak to the seller. Find your next find.'
               : 'Enter your code and tell us a little about yourself.'}
           </p>
         </div>
@@ -128,7 +128,7 @@ export function SignIn({ close }: { close: () => void }) {
                 checked={analytics}
                 onChange={(event) => setAnalytics(event.target.checked)}
               />{' '}
-              Allow optional viewing analytics to improve the feed.
+              Personalise my feed using watch time and interactions.
             </label>
           </>
         )}

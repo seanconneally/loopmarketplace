@@ -66,7 +66,7 @@ export function Dealer() {
             Your forecourt. <span>A fresh audience.</span>
           </>
         }
-        description="Bring your inventory into the loop with one import and your own walkaround videos."
+        description="Car inventory imports with your own walkaround videos. Use Sell something for other listings."
         action={
           <span className="section-pill">
             <FileSpreadsheet size={16} />
@@ -173,7 +173,7 @@ export function Dealer() {
                 <strong>We’ll check the details</strong>
                 <p>
                   Each advert follows the normal processing and safety checks. Manage drafts in My
-                  cars.
+                  listings.
                 </p>
               </div>
             </div>

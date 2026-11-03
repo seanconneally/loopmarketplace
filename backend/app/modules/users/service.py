@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import utcnow
 from app.core.errors import require
-from app.core.outbox import emit
 from app.modules.users.models import User
 from app.modules.users.repository import UserRepository
 from app.modules.users.schemas import ProfileUpdate, SellerView, UserView
@@ -50,7 +49,9 @@ class UserService:
         """Update profile declarations and consent explicitly."""
         user = await self.active(user_id)
         if user.analytics_consent and not data.analytics_consent:
-            await emit(self.session, "analytics.withdrawn", {"user_id": str(user_id)})
+            from app.modules.feed.service import FeedService
+
+            await FeedService(self.session).reset_preferences(user_id)
         user.name, user.adult_declared = data.name, data.adult_declared
         user.analytics_consent = data.analytics_consent
         await self.session.flush()

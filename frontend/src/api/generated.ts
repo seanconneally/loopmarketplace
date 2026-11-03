@@ -347,6 +347,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/feed/feedback': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Feedback */
+    put: operations['feedback_api_v1_feed_feedback_put'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/feed/feedback/{listing_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Undo Feedback */
+    delete: operations['undo_feedback_api_v1_feed_feedback__listing_id__delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/feed/preferences': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Reset Preferences */
+    delete: operations['reset_preferences_api_v1_feed_preferences_delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/feed': {
     parameters: {
       query?: never;
@@ -777,12 +828,23 @@ export interface components {
        * Event Type
        * @enum {string}
        */
-      event_type: 'impression' | 'watch' | 'save' | 'message';
+      event_type:
+        'impression' | 'watch' | 'completion' | 'save' | 'message' | 'not_interested' | 'replay';
       /**
        * Value
        * @default 1
        */
       value: number;
+      /** Occurred At */
+      occurred_at?: string | null;
+    };
+    /** FeedFeedback */
+    FeedFeedback: {
+      /**
+       * Listing Id
+       * Format: uuid
+       */
+      listing_id: string;
     };
     /** FeedOptions */
     FeedOptions: {
@@ -850,9 +912,9 @@ export interface components {
       /**
        * Category
        * @default cars
-       * @constant
+       * @enum {string}
        */
-      category: 'cars';
+      category: 'cars' | 'homes' | 'golf' | 'other';
       /**
        * Region Id
        * @default ie-dublin
@@ -864,7 +926,11 @@ export interface components {
        * @constant
        */
       rights_confirmed: true;
-      car: components['schemas']['CarInput'];
+      car?: components['schemas']['CarInput'] | null;
+      /** Attributes */
+      attributes?: {
+        [key: string]: unknown;
+      };
     };
     /** ListingPage */
     ListingPage: {
@@ -893,9 +959,9 @@ export interface components {
       /**
        * Category
        * @default cars
-       * @constant
+       * @enum {string}
        */
-      category: 'cars';
+      category: 'cars' | 'homes' | 'golf' | 'other';
       /**
        * Region Id
        * @default ie-dublin
@@ -907,7 +973,11 @@ export interface components {
        * @constant
        */
       rights_confirmed: true;
-      car: components['schemas']['CarInput'];
+      car?: components['schemas']['CarInput'] | null;
+      /** Attributes */
+      attributes?: {
+        [key: string]: unknown;
+      };
       /** Revision */
       revision: number;
     };
@@ -934,7 +1004,11 @@ export interface components {
       category: string;
       /** Region Id */
       region_id: string;
-      car: components['schemas']['CarInput'];
+      car?: components['schemas']['CarInput'] | null;
+      /** Attributes */
+      attributes?: {
+        [key: string]: unknown;
+      };
       seller: components['schemas']['SellerView'];
       /** Playback Url */
       playback_url?: string | null;
@@ -1170,7 +1244,11 @@ export interface components {
       category: string;
       /** Region Id */
       region_id: string;
-      car: components['schemas']['CarInput'];
+      car?: components['schemas']['CarInput'] | null;
+      /** Attributes */
+      attributes?: {
+        [key: string]: unknown;
+      };
       seller: components['schemas']['SellerView'];
       /** Playback Url */
       playback_url?: string | null;
@@ -4007,9 +4085,340 @@ export interface operations {
       };
     };
   };
+  feedback_api_v1_feed_feedback_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FeedFeedback'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Consistent application error envelope */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+    };
+  };
+  undo_feedback_api_v1_feed_feedback__listing_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        listing_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Consistent application error envelope */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+    };
+  };
+  reset_preferences_api_v1_feed_preferences_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Consistent application error envelope */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+    };
+  };
   feed_api_v1_feed_get: {
     parameters: {
       query?: {
+        category?: ('cars' | 'homes' | 'golf') | null;
         q?: string | null;
         latitude?: number;
         longitude?: number;

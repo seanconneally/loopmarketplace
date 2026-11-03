@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.modules.listings.categories import ATTRIBUTE_MODELS, Category
 from app.modules.media.schemas import OwnerMediaView
 from app.modules.users.schemas import SellerView
 
@@ -21,14 +22,28 @@ class CarInput(BaseModel):
 class ListingCreate(BaseModel):
     title: str = Field(min_length=3, max_length=120)
     description: str = Field(default="", max_length=3000)
-    price_cents: int = Field(gt=0, le=100000000)
+    price_cents: int = Field(gt=0, le=2000000000)
     area: str = Field(min_length=2, max_length=100)
     latitude: float = Field(ge=53.05, le=53.65)
     longitude: float = Field(ge=-6.65, le=-5.95)
-    category: Literal["cars"] = "cars"
+    category: Category = "cars"
     region_id: Literal["ie-dublin"] = "ie-dublin"
     rights_confirmed: Literal[True]
-    car: CarInput
+    car: CarInput | None = None
+    attributes: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def category_facts(self) -> Self:
+        if self.category == "cars" and self.car is None:
+            raise ValueError("Car listings need car details.")
+        if self.category != "cars" and self.car is not None:
+            raise ValueError("Car details only belong to car listings.")
+        self.attributes = (
+            ATTRIBUTE_MODELS[self.category]
+            .model_validate(self.attributes)
+            .model_dump(exclude_none=True)
+        )
+        return self
 
 
 class ListingView(BaseModel):
@@ -41,7 +56,8 @@ class ListingView(BaseModel):
     area: str
     category: str
     region_id: str
-    car: CarInput
+    car: CarInput | None = None
+    attributes: dict[str, Any] = Field(default_factory=dict)
     seller: SellerView
     playback_url: str | None = None
     poster_url: str | None = None

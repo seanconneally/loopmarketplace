@@ -87,7 +87,7 @@ export async function request<T>(
     throw new Error(
       navigator.onLine === false
         ? 'You’re offline. Reconnect and try again.'
-        : 'Couldn’t reach Motorloop. Check your connection and try again.',
+        : 'Couldn’t reach Loop Marketplace. Check your connection and try again.',
     );
   }
   if (response.status === 401 && retry && !path.startsWith('/auth/')) {

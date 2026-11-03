@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<
         <BrandMark />
         <span className="eyebrow">LET’S GET YOU MOVING AGAIN</span>
         <h1 id="recovery-title">Something went wrong on this page.</h1>
-        <p>Try opening it again. Saved adverts and uploads are still available in My cars.</p>
+        <p>Try opening it again. Saved adverts and uploads are still available in My listings.</p>
         <div className="recovery-actions">
           <button
             className="button dark"
@@ -33,7 +33,7 @@ export class ErrorBoundary extends Component<
             <RefreshCw size={17} /> Try again
           </button>
           <button className="button" onClick={() => window.location.reload()}>
-            Reload Motorloop
+            Reload Loop Marketplace
           </button>
           <a href="/" className="text-button">
             Back to discover
