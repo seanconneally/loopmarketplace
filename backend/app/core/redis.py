@@ -2,10 +2,21 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 from redis.asyncio import Redis
+from redis.asyncio.retry import Retry
+from redis.backoff import NoBackoff
 
 from app.core.config import settings
 
-client: Redis = Redis.from_url(settings().redis_url, decode_responses=True)
+client: Redis = Redis.from_url(
+    settings().redis_url,
+    decode_responses=True,
+    socket_connect_timeout=settings().redis_connect_timeout,
+    socket_timeout=settings().redis_socket_timeout,
+    max_connections=settings().redis_max_connections,
+    health_check_interval=30,
+    # Retrying an INCR or GETDEL after a lost response could apply it twice.
+    retry=Retry(NoBackoff(), 0),
+)
 
 
 async def command(*arguments: str | int) -> Any:

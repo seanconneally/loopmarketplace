@@ -14,6 +14,17 @@ class UserRepository:
     async def get(self, user_id: UUID) -> User | None:
         return await self.session.get(User, user_id)
 
+    async def active_names(self, user_ids: set[UUID]) -> dict[UUID, str]:
+        return dict(
+            (
+                await self.session.execute(
+                    select(User.id, User.name).where(User.id.in_(user_ids), User.status == "active")
+                )
+            )
+            .tuples()
+            .all()
+        )
+
     async def by_phone(self, phone: str) -> User | None:
         return cast(User | None, await self.session.scalar(select(User).where(User.phone == phone)))
 

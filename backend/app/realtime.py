@@ -1,9 +1,11 @@
 import asyncio
 import json
 from contextlib import suppress
+from time import monotonic
 from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from redis.exceptions import RedisError
 
 from app.core.config import settings
 from app.core.db import sessions
@@ -39,13 +41,19 @@ class RealtimeService:
             user, family = UUID(user_raw), UUID(family_raw)
             async with client.pubsub() as pubsub:
                 await pubsub.subscribe(f"user:{user}")
+                next_authorization = 0.0
+                next_heartbeat = 0.0
                 while True:
-                    # Every loop rechecks authority, bounding suspension/logout exposure.
-                    async with sessions() as session:
-                        await UserService(session).active(user)
-                        if not await AuthRepository(session).valid_family(user, family):
-                            await socket.close(code=1008)
-                            return
+                    # Idle sockets do not query Postgres every second. Revocation is
+                    # still bounded, and every conversation event rechecks membership.
+                    now = monotonic()
+                    if now >= next_authorization:
+                        async with sessions() as session:
+                            await UserService(session).active(user)
+                            if not await AuthRepository(session).valid_family(user, family):
+                                await socket.close(code=1008)
+                                return
+                        next_authorization = now + settings().websocket_auth_interval
                     message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1)
                     if message:
                         event = json.loads(message["data"])
@@ -59,11 +67,20 @@ class RealtimeService:
                                 except DomainError:
                                     continue
                         await socket.send_json(event)
-                    else:
+                    elif monotonic() >= next_heartbeat:
                         await socket.send_json({"type": "heartbeat", "data": {}})
+                        next_heartbeat = monotonic() + 15
                     # The client sends no application payloads after authentication.
                     # ASGI disconnect delivery is observed by send failures and timeout.
-        except (TimeoutError, WebSocketDisconnect, DomainError, ValueError, RuntimeError):
+        except (
+            TimeoutError,
+            WebSocketDisconnect,
+            DomainError,
+            ValueError,
+            RuntimeError,
+            RedisError,
+            OSError,
+        ):
             with suppress(RuntimeError):
                 await socket.close(code=1008)
         finally:

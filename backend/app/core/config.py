@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +13,10 @@ class Settings(BaseSettings):
         "postgresql+psycopg://motorloop:motorloop-local-only@127.0.0.1:15432/motorloop"
     )
     redis_url: str = "redis://127.0.0.1:6379/0"
+    redis_connect_timeout: float = Field(default=2, gt=0, le=30)
+    redis_socket_timeout: float = Field(default=5, gt=1, le=60)
+    redis_max_connections: int = Field(default=256, ge=10, le=10000)
+    websocket_auth_interval: float = Field(default=15, ge=1, le=30)
     jwt_secret: str = "local-development-key-change-before-any-deployment"
     public_origin: str = "http://localhost:8080"
     storage_endpoint: str = "http://localhost:9000"

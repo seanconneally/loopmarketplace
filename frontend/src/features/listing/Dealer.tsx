@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
-import { UploadCloud } from 'lucide-react';
+import { Download, FileSpreadsheet, UploadCloud } from 'lucide-react';
 import { mutation, request } from '../../api/client';
 import { uploadVideo } from './uploads';
+import { PageHeading } from '../../shared/PageHeading';
 
 type ImportJob = {
   id: string;
@@ -58,55 +59,131 @@ export function Dealer() {
   }
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow">VERIFIED DEALER STUDIO</div>
-          <h1>Bring your forecourt online.</h1>
-          <p>One CSV. Your own videos. A whole new audience.</p>
-        </div>
+      <PageHeading
+        eyebrow="YOUR DEALER STUDIO"
+        title={
+          <>
+            Your forecourt. <span>A fresh audience.</span>
+          </>
+        }
+        description="Bring your inventory into the loop with one import and your own walkaround videos."
+        action={
+          <span className="section-pill">
+            <FileSpreadsheet size={16} />
+            Up to 100 adverts per import
+          </span>
+        }
+      />
+      <div className="studio-layout">
+        <form className="form-stack studio-panel" onSubmit={(event) => void submit(event)}>
+          <div className="form-section-heading">
+            <span>01</span>
+            <div>
+              <strong>Start with your inventory</strong>
+              <p>Use the template so every advert has the right details.</p>
+            </div>
+          </div>
+          <label className="upload-drop">
+            <FileSpreadsheet size={30} />
+            <strong>Inventory CSV</strong>
+            <span>{csv?.name || 'Choose your completed inventory file'}</span>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => setCsv(event.target.files?.[0] || null)}
+              required
+              disabled={busy}
+            />
+          </label>
+          <div className="form-section-heading">
+            <span>02</span>
+            <div>
+              <strong>Add the walkarounds</strong>
+              <p>Video names should match the filenames in your template.</p>
+            </div>
+          </div>
+          <label className="upload-drop">
+            <UploadCloud size={30} />
+            <strong>Matching videos</strong>
+            <span>
+              {videos.length
+                ? `${videos.length} video${videos.length === 1 ? '' : 's'} selected`
+                : 'Select the original MP4 or MOV files'}
+            </span>
+            <input
+              type="file"
+              multiple
+              accept="video/mp4,video/quicktime,.mov"
+              onChange={(event) => setVideos(Array.from(event.target.files || []))}
+              disabled={busy}
+            />
+          </label>
+          {videos.length > 0 && (
+            <div className="studio-file-summary">
+              {videos.slice(0, 4).map((video, index) => (
+                <span key={`${video.name}-${index}`}>{video.name}</span>
+              ))}
+              {videos.length > 4 && <span>+{videos.length - 4} more</span>}
+            </div>
+          )}
+          <label className="checkbox">
+            <input type="checkbox" required />I own or am authorized to advertise every vehicle and
+            video in this import.
+          </label>
+          <button className="button primary" disabled={busy}>
+            {busy ? 'Importing inventory…' : 'Import inventory'}
+          </button>
+          {status && (
+            <p className="notice" role="status">
+              {status}
+            </p>
+          )}
+          {results.map((result) => (
+            <p key={result} className="tiny">
+              {result}
+            </p>
+          ))}
+        </form>
+        <aside className="studio-guide">
+          <h2>
+            From inventory
+            <br />
+            to first impression.
+          </h2>
+          <div className="studio-steps">
+            <div>
+              <span>1</span>
+              <div>
+                <strong>Prepare the template</strong>
+                <p>
+                  Fill in your cars and their video filenames. Prices use cents: €19,950 is 1995000.
+                </p>
+              </div>
+            </div>
+            <div>
+              <span>2</span>
+              <div>
+                <strong>Match your videos</strong>
+                <p>A 15–60 second walkaround for each car. Keep the original file names.</p>
+              </div>
+            </div>
+            <div>
+              <span>3</span>
+              <div>
+                <strong>We’ll check the details</strong>
+                <p>
+                  Each advert follows the normal processing and safety checks. Manage drafts in My
+                  cars.
+                </p>
+              </div>
+            </div>
+          </div>
+          <a className="button" href="/dealer-template.csv" download>
+            <Download size={16} />
+            Download template
+          </a>
+        </aside>
       </div>
-      <form className="form-stack review-card" onSubmit={(event) => void submit(event)}>
-        <UploadCloud size={32} />
-        <p className="muted">
-          Start with the sample in docs/dealer-template.csv. Price is in integer euro cents. Match
-          each video_filename to a selected file. Maximum 100 rows per import.
-        </p>
-        <label>
-          Inventory CSV
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(event) => setCsv(event.target.files?.[0] || null)}
-            required
-          />
-        </label>
-        <label>
-          Matching videos
-          <input
-            type="file"
-            multiple
-            accept="video/mp4,video/quicktime,.mov"
-            onChange={(event) => setVideos(Array.from(event.target.files || []))}
-          />
-        </label>
-        <label className="checkbox">
-          <input type="checkbox" required />I own or am authorized to advertise every vehicle and
-          video in this import.
-        </label>
-        <button className="button primary" disabled={busy}>
-          {busy ? 'Importing inventory…' : 'Import inventory'}
-        </button>
-        {status && (
-          <p className="notice" role="status">
-            {status}
-          </p>
-        )}
-        {results.map((result) => (
-          <p key={result} className="tiny">
-            {result}
-          </p>
-        ))}
-      </form>
     </>
   );
 }

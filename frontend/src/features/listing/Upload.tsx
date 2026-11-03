@@ -7,6 +7,8 @@ import { useAuth } from '../../shared/Auth';
 import { ListingFields } from './ListingFields';
 import { listingDetails } from './listingForm';
 import { uploadVideo } from './uploads';
+import { readTextDraft, writeDraft, removeDraft } from '../../shared/draftStorage';
+import { useOnlineStatus } from '../../shared/useOnlineStatus';
 
 type PendingDraft = {
   version: 1;
@@ -26,6 +28,11 @@ function readPending(key: string): PendingDraft | null {
 
 export function Upload({ close, complete }: { close: () => void; complete: () => void }) {
   const { user } = useAuth();
+  const online = useOnlineStatus();
+  const formKey = `motorloop.advert-draft.${user?.id}`;
+  const [draft, setDraft] = useState(() => readTextDraft(formKey));
+  const [draftWarning, setDraftWarning] = useState(false);
+  const [formVersion, setFormVersion] = useState(0);
   const storageKey = `motorloop.pending-advert.${user?.id}`;
   const [pending, setPending] = useState<PendingDraft | null>(() => readPending(storageKey));
   const [file, setFile] = useState<File | null>(null);
@@ -38,7 +45,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!file || busy) return;
+    if (!file || busy || !online) return;
     setError('');
     let saved = pending;
     try {
@@ -69,7 +76,10 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
       }
       const state = await uploadVideo(saved.listingId!, file, setStatus, {
         signal: abort.signal,
-        queued: () => localStorage.removeItem(storageKey),
+        queued: () => {
+          localStorage.removeItem(storageKey);
+          removeDraft(formKey);
+        },
       });
       setResult(
         state === 'live'
@@ -92,7 +102,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
 
   return (
     <Modal
-      title={pending ? 'Continue your saved advert.' : 'Give your car its moment.'}
+      title={pending ? 'Continue your advert' : 'Let’s get your car in the loop.'}
       close={close}
     >
       {result ? (
@@ -109,7 +119,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
       ) : (
         <>
           <p className="muted">
-            A quick walkaround says more than a hundred photos. Your video’s audio is preserved.
+            A short walkaround gives buyers a proper first look. We keep the sound, too.
           </p>
           {pending && (
             <div className="notice">
@@ -117,7 +127,20 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
               edit its details in My cars.
             </div>
           )}
-          <form className="form-stack" onSubmit={(event) => void submit(event)}>
+          <form
+            key={formVersion}
+            className="form-stack"
+            onSubmit={(event) => void submit(event)}
+            onChange={(event) => {
+              if (pending || busy) return;
+              const values = Object.fromEntries(
+                [...new FormData(event.currentTarget)].filter(
+                  (entry): entry is [string, string] => typeof entry[1] === 'string',
+                ),
+              );
+              setDraftWarning(!writeDraft(formKey, values));
+            }}
+          >
             <label className="upload-drop">
               <UploadCloud size={30} />
               <strong>{file?.name || 'Choose your walkaround video'}</strong>
@@ -134,7 +157,16 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
                 }}
               />
             </label>
-            <ListingFields value={pending?.data} disabled={busy || !!pending} />
+            <ListingFields
+              value={pending?.data}
+              draft={pending ? undefined : draft}
+              disabled={busy || !!pending}
+            />
+            {draftWarning && (
+              <p className="notice" role="status">
+                This browser couldn’t save your details. Keep this page open until you finish.
+              </p>
+            )}
             <p className="tiny muted">
               You can close this window and resume later in My cars. After a refresh, select the
               original video again.
@@ -149,7 +181,7 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
                 {error}
               </p>
             )}
-            <button className="button primary" disabled={busy}>
+            <button className="button primary" disabled={busy || !online}>
               {busy ? 'Working on your video…' : pending ? 'Resume upload' : 'Upload & publish'}
             </button>
             {busy && (
@@ -167,6 +199,9 @@ export function Upload({ close, complete }: { close: () => void; complete: () =>
                 className="text-button"
                 onClick={() => {
                   localStorage.removeItem(storageKey);
+                  removeDraft(formKey);
+                  setDraft({});
+                  setFormVersion((value) => value + 1);
                   setPending(null);
                   setFile(null);
                   setStatus('');

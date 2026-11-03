@@ -42,6 +42,10 @@ class ModerationService:
         """Return symmetric block policy for feeds, messaging and viewings."""
         return await self.repo.blocked(first, second)
 
+    async def blocked_peers(self, user: UUID, peers: set[UUID]) -> set[UUID]:
+        """Apply symmetric block policy to a bounded conversation page in one query."""
+        return await self.repo.blocked_peers(user, peers)
+
     async def set_block(self, user: UUID, target: UUID, enabled: bool) -> None:
         """Set a user's directional block, with symmetric access enforcement."""
         require(user != target, 422, "invalid_block", "You cannot block yourself.")
@@ -54,7 +58,11 @@ class ModerationService:
             await self.session.execute(
                 delete(Block).where(Block.blocker_id == user, Block.blocked_id == target)
             )
-        await emit(self.session, "block.changed", {"user_id": str(user), "target_id": str(target)})
+        await emit(
+            self.session,
+            "block.changed",
+            {"target_id": str(target), "recipients": [str(user), str(target)]},
+        )
 
     async def report(self, user: UUID, data: ReportInput, key: str) -> ReportView:
         """Persist an authenticated report with a scoped idempotency key."""

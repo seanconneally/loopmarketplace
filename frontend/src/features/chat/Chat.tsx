@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
   Download,
@@ -8,6 +8,7 @@ import {
   Send,
   ShieldCheck,
   UserX,
+  ArrowLeft,
 } from 'lucide-react';
 import {
   downloadCalendar,
@@ -19,36 +20,87 @@ import {
 } from '../../api/client';
 import { useAuth } from '../../shared/Auth';
 import { Modal } from '../../shared/Modal';
+import { PageHeading } from '../../shared/PageHeading';
+import { readDraft, readTextDraft, writeDraft } from '../../shared/draftStorage';
+import { useOnlineStatus } from '../../shared/useOnlineStatus';
 
 export function Chat({ initialConversation }: { initialConversation?: string | null }) {
   const auth = useAuth();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string | null>(initialConversation || null);
-  const [body, setBody] = useState('');
+  const online = useOnlineStatus();
+  const draftKey = `motorloop.chat-draft.${auth.user?.id}`;
+  const [drafts, setDrafts] = useState<Record<string, string>>(() => readTextDraft(draftKey));
+  const [draftWarning, setDraftWarning] = useState(false);
+  useEffect(() => {
+    setDraftWarning(!writeDraft(draftKey, drafts));
+  }, [draftKey, drafts]);
+  const body = selected ? drafts[selected] || '' : '';
+  const attempts = useRef(
+    new Map(
+      Object.entries(
+        readDraft<Record<string, { body: string; key: string }>>(draftKey + '.attempts', {}),
+      ).filter(
+        ([, value]) => value && typeof value.body === 'string' && typeof value.key === 'string',
+      ),
+    ),
+  );
   const [proposal, setProposal] = useState(false);
+  const [proposing, setProposing] = useState(false);
+  const proposalAttempt = useRef<{ fingerprint: string; key: string } | null>(null);
   const [counter, setCounter] = useState<Viewing | null>(null);
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [reportReason, setReportReason] = useState('');
-  const conversations = useQuery({
+  const conversations = useInfiniteQuery({
     queryKey: ['conversations', auth.user?.id],
-    queryFn: () => request<{ items: Conversation[] }>('/conversations'),
+    initialPageParam: '',
+    queryFn: ({ pageParam }) =>
+      request<{ items: Conversation[]; next_cursor: string | null }>(
+        `/conversations${pageParam ? `?cursor=${encodeURIComponent(pageParam)}` : ''}`,
+      ),
+    getNextPageParam: (page) => page.next_cursor || undefined,
     enabled: !!auth.user,
   });
-  const conversation = conversations.data?.items.find((item) => item.id === selected);
-  const messages = useQuery({
+  const conversationItems = [
+    ...new Map(
+      (conversations.data?.pages.flatMap((page) => page.items) || []).map((item) => [
+        item.id,
+        item,
+      ]),
+    ).values(),
+  ];
+  const conversation = conversationItems.find((item) => item.id === selected);
+  const messages = useInfiniteQuery({
     queryKey: ['messages', selected],
-    queryFn: () =>
+    initialPageParam: '',
+    queryFn: ({ pageParam }) =>
       request<{ items: Message[]; next_cursor: string | null }>(
-        `/conversations/${selected}/messages`,
+        `/conversations/${selected}/messages${pageParam ? `?cursor=${encodeURIComponent(pageParam)}` : ''}`,
       ),
+    getNextPageParam: (page) => page.next_cursor || undefined,
     enabled: !!selected,
     refetchInterval: 10000,
   });
-  const viewings = useQuery({
+  const messageItems = [
+    ...new Map(
+      (
+        messages.data?.pages
+          .slice()
+          .reverse()
+          .flatMap((page) => page.items) || []
+      ).map((item) => [item.id, item]),
+    ).values(),
+  ];
+  const viewings = useInfiniteQuery({
     queryKey: ['viewings', selected],
-    queryFn: () => request<{ items: Viewing[] }>(`/viewings?conversation_id=${selected}`),
+    initialPageParam: '',
+    queryFn: ({ pageParam }) =>
+      request<{ items: Viewing[]; next_cursor: string | null }>(
+        `/viewings?conversation_id=${selected}${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`,
+      ),
+    getNextPageParam: (page) => page.next_cursor || undefined,
     enabled: !!selected,
     refetchInterval: 10000,
   });
@@ -56,7 +108,7 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
     if (initialConversation) setSelected(initialConversation);
   }, [initialConversation]);
   useEffect(() => {
-    const last = messages.data?.items.at(-1);
+    const last = messages.data?.pages[0]?.items.at(-1);
     if (last && !last.read_at && last.sender_id !== auth.user?.id)
       void request(`/conversations/${selected}/read`, {
         method: 'PUT',
@@ -66,13 +118,29 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
 
   async function send(event: FormEvent) {
     event.preventDefault();
-    if (!body.trim() || !selected || sending) return;
+    if (!body.trim() || !selected || sending || !online) return;
     setSending(true);
     setError('');
+    const conversationId = selected;
+    const submitted = body;
+    let attempt = attempts.current.get(conversationId);
+    if (!attempt || attempt.body !== submitted) {
+      attempt = { body: submitted, key: crypto.randomUUID() };
+      attempts.current.set(conversationId, attempt);
+      writeDraft(draftKey + '.attempts', Object.fromEntries(attempts.current));
+    }
     try {
-      await request(`/conversations/${selected}/messages`, mutation({ body }));
-      setBody('');
-      await queryClient.invalidateQueries({ queryKey: ['messages', selected] });
+      await request(
+        `/conversations/${conversationId}/messages`,
+        mutation({ body: submitted }, attempt.key),
+      );
+      attempts.current.delete(conversationId);
+      writeDraft(draftKey + '.attempts', Object.fromEntries(attempts.current));
+      setDrafts((current) =>
+        current[conversationId] === submitted ? { ...current, [conversationId]: '' } : current,
+      );
+      await queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+      await queryClient.invalidateQueries({ queryKey: ['conversations'] });
     } catch (problem) {
       setError((problem as Error).message);
     } finally {
@@ -93,24 +161,33 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
   }
   async function propose(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (proposing || !selected || !online) return;
+    setProposing(true);
+    setError('');
+    const conversationId = selected;
     const values = new FormData(event.currentTarget);
     try {
       const details = {
         starts_at: new Date(String(values.get('time'))).toISOString(),
         place: String(values.get('place')),
       };
-      if (counter)
-        await request(
-          `/viewings/${counter.id}/respond`,
-          mutation({ ...details, action: 'counter', revision: counter.revision }),
-        );
-      else await request('/viewings', mutation({ ...details, conversation_id: selected }));
+      const path = counter ? `/viewings/${counter.id}/respond` : '/viewings';
+      const payload = counter
+        ? { ...details, action: 'counter', revision: counter.revision }
+        : { ...details, conversation_id: conversationId };
+      const fingerprint = JSON.stringify({ path, payload });
+      if (proposalAttempt.current?.fingerprint !== fingerprint)
+        proposalAttempt.current = { fingerprint, key: crypto.randomUUID() };
+      await request(path, mutation(payload, proposalAttempt.current.key));
+      proposalAttempt.current = null;
       setProposal(false);
       setCounter(null);
-      await queryClient.invalidateQueries({ queryKey: ['viewings', selected] });
-      await queryClient.invalidateQueries({ queryKey: ['messages', selected] });
+      await queryClient.invalidateQueries({ queryKey: ['viewings', conversationId] });
+      await queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
     } catch (problem) {
       setError((problem as Error).message);
+    } finally {
+      setProposing(false);
     }
   }
   async function block() {
@@ -132,19 +209,27 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
 
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow">GOOD CONVERSATIONS. GREAT POSSIBILITIES.</div>
-          <h1>Your inbox.</h1>
-          <p>Ask a question. Arrange a viewing. Meet your next car.</p>
-        </div>
-      </div>
-      <div className="chat-layout">
+      <PageHeading
+        eyebrow="START WITH A CONVERSATION"
+        title={
+          <>
+            Good questions. <span>Better connections.</span>
+          </>
+        }
+        description="Ask about the details, agree a time and keep everything in one place."
+        action={
+          <span className="section-pill">
+            <ShieldCheck size={16} />
+            Private conversations
+          </span>
+        }
+      />
+      <div className={`chat-layout ${selected ? 'has-conversation' : ''}`}>
         <aside className="conversation-list">
           <div className="panel-kicker">CONVERSATIONS</div>
           {conversations.isPending && <p className="muted">Loading conversations…</p>}
           {conversations.error && <p className="error">{conversations.error.message}</p>}
-          {conversations.data?.items.map((item) => (
+          {conversationItems.map((item) => (
             <button
               key={item.id}
               className={`conversation-item ${selected === item.id ? 'active' : ''}`}
@@ -157,7 +242,16 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
               </div>
             </button>
           ))}
-          {conversations.data?.items.length === 0 && (
+          {conversations.hasNextPage && (
+            <button
+              className="text-button"
+              disabled={conversations.isFetchingNextPage}
+              onClick={() => void conversations.fetchNextPage()}
+            >
+              {conversations.isFetchingNextPage ? 'Loading…' : 'More conversations'}
+            </button>
+          )}
+          {conversations.isSuccess && conversationItems.length === 0 && (
             <p className="muted">Find a car you like and message its seller to get started.</p>
           )}
         </aside>
@@ -165,19 +259,32 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
           {!selected ? (
             <div className="chat-placeholder">
               <MessageCircle size={42} />
-              <h2>A good place to start.</h2>
-              <p>Select a conversation to see what’s next.</p>
+              <h2>Your next conversation starts here.</h2>
+              <p>Choose a conversation, or find a car and message its seller.</p>
             </div>
           ) : (
             <>
               <header className="chat-header">
-                <div>
-                  <strong>{conversation?.other_name || 'Your conversation'}</strong>
-                  <span>{conversation?.listing_title}</span>
+                <button
+                  className="icon-button chat-back"
+                  aria-label="All conversations"
+                  onClick={() => setSelected(null)}
+                >
+                  <ArrowLeft size={18} />
+                </button>
+                <div className="chat-person">
+                  <div className="seller-avatar">
+                    {conversation?.other_name.slice(0, 2).toUpperCase() || 'ML'}
+                  </div>
+                  <div>
+                    <strong>{conversation?.other_name || 'Your conversation'}</strong>
+                    <span>{conversation?.listing_title}</span>
+                  </div>
                 </div>
                 <button
                   className="icon-button"
                   aria-label="Report this user"
+                  title="Report this conversation"
                   onClick={() => setReporting(true)}
                 >
                   <Flag size={17} />
@@ -185,6 +292,7 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
                 <button
                   className="icon-button"
                   aria-label="Block this user"
+                  title="Block this member"
                   onClick={() => void block()}
                 >
                   <UserX size={18} />
@@ -234,12 +342,17 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
                 Keep it local. Meet in public. Never send a deposit.
               </div>
               <div className="message-list" aria-live="polite">
-                {messages.data?.next_cursor && (
-                  <p className="tiny muted">
-                    Showing the latest 50 messages. Older history is available through the API.
-                  </p>
+                {messages.hasNextPage && (
+                  <button
+                    className="text-button"
+                    disabled={messages.isFetchingNextPage}
+                    onClick={() => void messages.fetchNextPage()}
+                  >
+                    {messages.isFetchingNextPage ? 'Loading…' : 'Load older messages'}
+                  </button>
                 )}
-                {messages.data?.items.map((item) => (
+                {messages.isPending && <p className="muted">Loading messages…</p>}
+                {messageItems.map((item) => (
                   <div
                     key={item.id}
                     className={`message ${item.sender_id === auth.user?.id ? 'mine' : ''} ${item.message_type === 'viewing' ? 'structured-message' : ''}`}
@@ -260,72 +373,90 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
                     ))}
                   </div>
                 ))}
-                {viewings.data?.items.map((item) => (
-                  <div key={item.id} className="viewing-card">
-                    <div className="viewing-label">
-                      <CalendarDays size={17} />
-                      VIEWING · {item.status.toUpperCase()}
-                    </div>
-                    <strong>
-                      {new Date(item.starts_at).toLocaleString('en-IE', {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      })}
-                    </strong>
-                    <p>{item.place}</p>
-                    {item.history.length > 0 && (
-                      <span className="tiny muted">Revised proposal · version {item.revision}</span>
-                    )}
-                    <div className="viewing-actions">
-                      {item.status === 'proposed' && item.proposed_by !== auth.user?.id && (
-                        <>
-                          <button
-                            className="button primary small"
-                            onClick={() => void respond(item, 'accept')}
-                          >
-                            Accept
-                          </button>
+                {viewings.data?.pages
+                  .flatMap((page) => page.items)
+                  .map((item) => (
+                    <div key={item.id} className={`viewing-card status-${item.status}`}>
+                      <div className="viewing-label">
+                        <CalendarDays size={17} />
+                        VIEWING · {item.status.toUpperCase()}
+                      </div>
+                      <strong>
+                        {new Date(item.starts_at).toLocaleString('en-IE', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </strong>
+                      <p>{item.place}</p>
+                      {item.history.length > 0 && (
+                        <span className="tiny muted">
+                          Revised proposal · version {item.revision}
+                        </span>
+                      )}
+                      <div className="viewing-actions">
+                        {item.status === 'proposed' && item.proposed_by !== auth.user?.id && (
+                          <>
+                            <button
+                              className="button primary small"
+                              onClick={() => void respond(item, 'accept')}
+                            >
+                              Accept
+                            </button>
+                            <button
+                              className="button small"
+                              onClick={() => {
+                                setCounter(item);
+                                setProposal(true);
+                              }}
+                            >
+                              Counter
+                            </button>
+                            <button
+                              className="text-button"
+                              onClick={() => void respond(item, 'decline')}
+                            >
+                              Decline
+                            </button>
+                          </>
+                        )}
+                        {item.status === 'accepted' && (
                           <button
                             className="button small"
-                            onClick={() => {
-                              setCounter(item);
-                              setProposal(true);
-                            }}
+                            onClick={() =>
+                              void downloadCalendar(item.id).catch((problem: Error) =>
+                                setError(problem.message),
+                              )
+                            }
                           >
-                            Counter
+                            <Download size={14} />
+                            Calendar
                           </button>
+                        )}
+                        {['proposed', 'accepted'].includes(item.status) && (
                           <button
                             className="text-button"
-                            onClick={() => void respond(item, 'decline')}
+                            onClick={() => void respond(item, 'cancel')}
                           >
-                            Decline
+                            Cancel
                           </button>
-                        </>
-                      )}
-                      {item.status === 'accepted' && (
-                        <button
-                          className="button small"
-                          onClick={() =>
-                            void downloadCalendar(item.id).catch((problem: Error) =>
-                              setError(problem.message),
-                            )
-                          }
-                        >
-                          <Download size={14} />
-                          Calendar
-                        </button>
-                      )}
-                      {['proposed', 'accepted'].includes(item.status) && (
-                        <button
-                          className="text-button"
-                          onClick={() => void respond(item, 'cancel')}
-                        >
-                          Cancel
-                        </button>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                {viewings.hasNextPage && (
+                  <button
+                    className="text-button"
+                    disabled={viewings.isFetchingNextPage}
+                    onClick={() => void viewings.fetchNextPage()}
+                  >
+                    {viewings.isFetchingNextPage ? 'Loading…' : 'More viewings'}
+                  </button>
+                )}
+                {viewings.error && (
+                  <p className="error" role="alert">
+                    {viewings.error.message}
+                  </p>
+                )}
               </div>
               {proposal && (
                 <form className="proposal-form" onSubmit={(event) => void propose(event)}>
@@ -348,7 +479,9 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
                     />
                   </label>
                   <div className="viewing-actions">
-                    <button className="button primary small">Send proposal</button>
+                    <button className="button primary small" disabled={proposing || !online}>
+                      {proposing ? 'Sending…' : 'Send proposal'}
+                    </button>
                     <button
                       type="button"
                       className="text-button"
@@ -368,6 +501,11 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
                 </p>
               )}
               {messages.error && <p className="error">{messages.error.message}</p>}
+              {draftWarning && (
+                <p className="notice" role="status">
+                  This browser couldn’t save your draft. Keep this page open until you send it.
+                </p>
+              )}
               <form className="message-composer" onSubmit={(event) => void send(event)}>
                 <button
                   type="button"
@@ -381,13 +519,16 @@ export function Chat({ initialConversation }: { initialConversation?: string | n
                   aria-label="Your message"
                   placeholder="Ask about the car…"
                   value={body}
-                  onChange={(event) => setBody(event.target.value)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (selected) setDrafts((current) => ({ ...current, [selected]: value }));
+                  }}
                   maxLength={4000}
                 />
                 <button
                   className="send-button"
                   aria-label="Send message"
-                  disabled={sending || !body.trim()}
+                  disabled={sending || !body.trim() || !online}
                 >
                   <Send size={18} />
                 </button>

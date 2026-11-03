@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { mutation, request } from '../../api/client';
+import { ShieldCheck } from 'lucide-react';
+import { PageHeading } from '../../shared/PageHeading';
 
 type Report = {
   id: string;
@@ -12,20 +14,33 @@ type Report = {
 export function Moderation() {
   const queryClient = useQueryClient();
   const [error, setError] = useState('');
+  const [recording, setRecording] = useState<string | null>(null);
   const query = useQuery({
     queryKey: ['reports'],
     queryFn: () => request<{ items: Report[] }>('/moderation/queue'),
   });
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <div className="eyebrow">MODERATOR WORKSPACE</div>
-          <h1>The review queue.</h1>
-          <p>Every decision needs a clear reason.</p>
-        </div>
-      </div>
-      {error && <p className="error">{error}</p>}
+      <PageHeading
+        eyebrow="THE MODERATOR WORKSPACE"
+        title={
+          <>
+            A fair review. <span>A clear decision.</span>
+          </>
+        }
+        description="Review flagged activity and record the reason behind every decision."
+        action={
+          <span className="section-pill">
+            <ShieldCheck size={16} />
+            Decisions are recorded
+          </span>
+        }
+      />
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
       {query.error && <p className="error">{query.error.message}</p>}
       <div className="review-list">
         {query.data?.items.map((report) => (
@@ -34,6 +49,9 @@ export function Moderation() {
             key={report.id}
             onSubmit={(event) => {
               event.preventDefault();
+              if (recording) return;
+              setRecording(report.id);
+              setError('');
               const data = new FormData(event.currentTarget);
               void request(
                 '/moderation/actions',
@@ -45,7 +63,8 @@ export function Moderation() {
                 }),
               )
                 .then(() => queryClient.invalidateQueries({ queryKey: ['reports'] }))
-                .catch((problem: Error) => setError(problem.message));
+                .catch((problem: Error) => setError(problem.message))
+                .finally(() => setRecording(null));
             }}
           >
             <div className="eyebrow">
@@ -62,7 +81,7 @@ export function Moderation() {
               <>
                 <label>
                   Decision
-                  <select name="action">
+                  <select name="action" disabled={recording === report.id}>
                     {report.target_type === 'listing' ? (
                       <>
                         <option value="approve">Approve</option>
@@ -75,9 +94,18 @@ export function Moderation() {
                 </label>
                 <label>
                   Statement of reasons
-                  <textarea name="reason" minLength={5} maxLength={1000} required />
+                  <textarea
+                    name="reason"
+                    minLength={5}
+                    maxLength={1000}
+                    required
+                    placeholder="Explain the decision clearly. This becomes part of the review record."
+                    disabled={recording === report.id}
+                  />
                 </label>
-                <button className="button dark">Record decision</button>
+                <button className="button dark" disabled={!!recording}>
+                  {recording === report.id ? 'Recording decision…' : 'Record decision'}
+                </button>
               </>
             )}
           </form>
@@ -85,8 +113,9 @@ export function Moderation() {
       </div>
       {query.data?.items.length === 0 && (
         <div className="empty-card">
+          <ShieldCheck size={36} />
           <h2>All clear for now.</h2>
-          <p>No open reports.</p>
+          <p>There are no open reports waiting for review.</p>
         </div>
       )}
     </>

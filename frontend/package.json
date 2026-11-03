@@ -12,6 +12,7 @@
     "format:check": "prettier --check src",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:mobile": "playwright test --config playwright.mobile.config.ts",
     "generate:api": "openapi-typescript ../docs/openapi.json -o src/api/generated.ts"
   },
   "dependencies": {

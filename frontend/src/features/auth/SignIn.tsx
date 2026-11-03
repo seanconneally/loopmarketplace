@@ -3,6 +3,7 @@ import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { mutation, request, type AuthResult, type User } from '../../api/client';
 import { useAuth } from '../../shared/Auth';
 import { Modal } from '../../shared/Modal';
+import { BrandMark } from '../../shared/Brand';
 
 export function SignIn({ close }: { close: () => void }) {
   const auth = useAuth();
@@ -44,10 +45,27 @@ export function SignIn({ close }: { close: () => void }) {
     }
   }
   return (
-    <Modal title="Your next drive starts here." close={close}>
-      <p className="muted">
-        Verify your phone to save favourites, chat with sellers and post a car.
-      </p>
+    <Modal
+      title={challenge === null ? 'Welcome to Motorloop.' : 'Verify your number.'}
+      close={close}
+    >
+      <div className="auth-intro">
+        <BrandMark />
+        <div>
+          <span className="eyebrow">
+            {challenge === null ? 'MAKE YOURSELF AT HOME' : 'ONE MORE STEP'}
+          </span>
+          <p>
+            {challenge === null
+              ? 'Save the ones you love. Speak to the seller. Find your next drive.'
+              : 'Enter your code and tell us a little about yourself.'}
+          </p>
+        </div>
+      </div>
+      <div className="auth-progress" aria-label={`Step ${challenge === null ? 1 : 2} of 2`}>
+        <span className="complete" />
+        <span className={challenge === null ? '' : 'complete'} />
+      </div>
       <form onSubmit={(event) => void submit(event)} className="form-stack">
         <label>
           Phone number
@@ -59,6 +77,7 @@ export function SignIn({ close }: { close: () => void }) {
             required
             placeholder="+353871234567"
             disabled={challenge !== null}
+            autoComplete="tel"
           />
         </label>
         {challenge !== null && (
@@ -81,6 +100,7 @@ export function SignIn({ close }: { close: () => void }) {
                 onChange={(event) => setCode(event.target.value)}
                 required
                 autoComplete="one-time-code"
+                autoFocus
               />
             </label>
             <label>
@@ -122,7 +142,24 @@ export function SignIn({ close }: { close: () => void }) {
           <ArrowRight size={18} />
         </button>
       </form>
-      <p className="tiny muted">Your number stays private. Buying and selling happen in person.</p>
+      <p className="auth-privacy">
+        <ShieldCheck size={15} />
+        Your number stays private. No public contact details.
+      </p>
+      {challenge !== null && (
+        <button
+          type="button"
+          className="text-button"
+          disabled={busy}
+          onClick={() => {
+            setChallenge(null);
+            setCode('');
+            setError('');
+          }}
+        >
+          Use a different phone number
+        </button>
+      )}
     </Modal>
   );
 }

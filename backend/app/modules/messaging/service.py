@@ -88,15 +88,26 @@ class MessagingService:
         """List the user's conversation summaries with cursor pagination."""
         after = UUID(decode_cursor(cursor)["id"]) if cursor else None
         rows = await self.repo.conversations(user, after)
+        caller = await UserService(self.session).active(user)
+        require(caller.verified_at, 403, "verification_required", "Verify your phone.")
+        page = rows[:20]
+        peers = {row.seller_id if row.buyer_id == user else row.buyer_id for row in page}
+        names = await UserService(self.session).active_names(peers)
+        blocked = await ModerationService(self.session).blocked_peers(user, peers)
+        titles = await ListingService(self.session).conversation_titles(
+            {row.listing_id for row in page}
+        )
         items = []
-        from app.core.errors import DomainError
-
-        for row in rows[:20]:
-            try:
-                await self.member(row.id, user)
-                items.append(await self._view(row, user))
-            except DomainError:
+        for row in page:
+            peer = row.seller_id if row.buyer_id == user else row.buyer_id
+            if peer not in names or peer in blocked:
                 continue
+            result = ConversationView.model_validate(row)
+            result.other_name, result.listing_title = (
+                names[peer],
+                titles.get(row.listing_id, "Listing"),
+            )
+            items.append(result)
         return ConversationPage(
             items=items,
             next_cursor=encode_cursor({"id": str(rows[19].id)}) if len(rows) > 20 else None,

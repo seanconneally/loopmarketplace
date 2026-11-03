@@ -3,12 +3,21 @@ import type { ListingInput } from '../../api/client';
 export function ListingFields({
   value,
   disabled = false,
+  draft,
 }: {
   value?: ListingInput;
   disabled?: boolean;
+  draft?: Record<string, string>;
 }) {
   return (
     <fieldset className="listing-fields" disabled={disabled}>
+      <div className="form-section-heading">
+        <span>01</span>
+        <div>
+          <strong>The essentials</strong>
+          <p>Give buyers the details they need at a glance.</p>
+        </div>
+      </div>
       <label>
         Listing title
         <input
@@ -16,7 +25,7 @@ export function ListingFields({
           required
           minLength={3}
           maxLength={120}
-          defaultValue={value?.title}
+          defaultValue={draft?.title ?? value?.title}
           placeholder="e.g. Volkswagen Golf R-Line"
         />
       </label>
@@ -27,7 +36,7 @@ export function ListingFields({
             name="make"
             required
             maxLength={50}
-            defaultValue={value?.car.make}
+            defaultValue={draft?.make ?? value?.car.make}
             placeholder="Volkswagen"
           />
         </label>
@@ -37,7 +46,7 @@ export function ListingFields({
             name="model"
             required
             maxLength={60}
-            defaultValue={value?.car.model}
+            defaultValue={draft?.model ?? value?.car.model}
             placeholder="Golf"
           />
         </label>
@@ -48,7 +57,7 @@ export function ListingFields({
             type="number"
             min="1900"
             max="2100"
-            defaultValue={value?.car.year ?? 2021}
+            defaultValue={draft?.year ?? value?.car.year ?? 2021}
             required
           />
         </label>
@@ -59,7 +68,7 @@ export function ListingFields({
             type="number"
             min="0"
             max="3000000"
-            defaultValue={value?.car.mileage_km}
+            defaultValue={draft?.mileage ?? value?.car.mileage_km}
             required
           />
         </label>
@@ -71,7 +80,7 @@ export function ListingFields({
             min="1"
             max="1000000"
             step="0.01"
-            defaultValue={value ? value.price_cents / 100 : undefined}
+            defaultValue={draft?.price ?? (value ? value.price_cents / 100 : undefined)}
             required
           />
         </label>
@@ -79,7 +88,7 @@ export function ListingFields({
           Area
           <input
             name="area"
-            defaultValue={value?.area ?? 'Dublin city'}
+            defaultValue={draft?.area ?? value?.area ?? 'Dublin city'}
             required
             minLength={2}
             maxLength={100}
@@ -87,7 +96,7 @@ export function ListingFields({
         </label>
         <label>
           Fuel
-          <select name="fuel" defaultValue={value?.car.fuel ?? 'petrol'}>
+          <select name="fuel" defaultValue={draft?.fuel ?? value?.car.fuel ?? 'petrol'}>
             <option value="petrol">Petrol</option>
             <option value="diesel">Diesel</option>
             <option value="electric">Electric</option>
@@ -96,24 +105,39 @@ export function ListingFields({
         </label>
         <label>
           Gearbox
-          <select name="transmission" defaultValue={value?.car.transmission ?? 'automatic'}>
+          <select
+            name="transmission"
+            defaultValue={draft?.transmission ?? value?.car.transmission ?? 'automatic'}
+          >
             <option value="automatic">Automatic</option>
             <option value="manual">Manual</option>
           </select>
         </label>
+      </div>
+      <div className="form-section-heading">
+        <span>02</span>
+        <div>
+          <strong>A little more detail</strong>
+          <p>The history, the highlights and anything worth knowing.</p>
+        </div>
       </div>
       <label>
         A little about the car
         <textarea
           name="description"
           maxLength={3000}
-          defaultValue={value?.description}
+          defaultValue={draft?.description ?? value?.description}
           placeholder="The history, the highlights, the little things worth knowing."
         />
       </label>
       <label className="checkbox">
-        <input type="checkbox" required defaultChecked={!!value} />I own this video and the car, and
-        I have the right to advertise both.
+        <input
+          name="rights"
+          type="checkbox"
+          required
+          defaultChecked={draft ? draft.rights === 'on' : !!value}
+        />
+        I own this video and the car, and I have the right to advertise both.
       </label>
     </fieldset>
   );

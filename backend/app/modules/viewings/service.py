@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import utcnow
-from app.core.errors import require
+from app.core.errors import DomainError, require
 from app.core.outbox import emit
 from app.core.paging import decode_cursor, encode_cursor
 from app.modules.messaging.service import MessagingService
@@ -189,24 +189,32 @@ class ViewingService:
             folded.append(current)
         return "\r\n".join(folded) + "\r\n"
 
-    async def schedule_reminders(self) -> None:
+    async def schedule_reminders(self, batch_size: int = 100) -> None:
         """Claim due reminders transactionally so scheduler replicas cannot duplicate them."""
+        now = utcnow()
         rows = list(
             await self.session.scalars(
                 select(Viewing)
                 .where(
                     Viewing.status == "accepted",
                     Viewing.reminded_at.is_(None),
-                    Viewing.starts_at > utcnow(),
-                    Viewing.starts_at <= utcnow() + timedelta(hours=1),
+                    Viewing.starts_at > now,
+                    Viewing.starts_at <= now + timedelta(hours=1),
                 )
+                .order_by(Viewing.starts_at, Viewing.id)
+                .limit(batch_size)
                 .with_for_update(skip_locked=True)
             )
         )
         for row in rows:
-            conversation = await MessagingService(self.session).member(
-                row.conversation_id, row.proposed_by
-            )
+            try:
+                conversation = await MessagingService(self.session).member(
+                    row.conversation_id, row.proposed_by
+                )
+            except DomainError:
+                # A blocked/suspended participant must not poison the whole batch.
+                row.reminded_at = now
+                continue
             for user_id in [conversation.buyer_id, conversation.seller_id]:
                 await emit(
                     self.session,
@@ -218,14 +226,20 @@ class ViewingService:
                         "revision": row.revision,
                     },
                 )
-            row.reminded_at = utcnow()
+            row.reminded_at = now
 
     async def reminder_valid(self, viewing_id: UUID, revision: int) -> bool:
         """Suppress a queued reminder if the viewing was changed or cancelled."""
         row = await self.session.get(Viewing, viewing_id)
-        return bool(
-            row
-            and row.status == "accepted"
-            and row.revision == revision
-            and row.starts_at > utcnow()
-        )
+        if (
+            not row
+            or row.status != "accepted"
+            or row.revision != revision
+            or row.starts_at <= utcnow()
+        ):
+            return False
+        try:
+            await MessagingService(self.session).member(row.conversation_id, row.proposed_by)
+        except DomainError:
+            return False
+        return True

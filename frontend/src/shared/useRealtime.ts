@@ -9,6 +9,7 @@ export function useRealtime(userId: string | undefined) {
     let stopped = false;
     let socket: WebSocket | null = null;
     let timer = 0;
+    let watchdog = 0;
     let delay = 1000;
     async function connect() {
       try {
@@ -18,13 +19,30 @@ export function useRealtime(userId: string | undefined) {
           `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws`,
         );
         socket.onopen = () => {
-          delay = 1000;
           socket?.send(JSON.stringify({ ticket }));
+          // Redis pub/sub is ephemeral: restore state from durable API data.
+          for (const key of [
+            'messages',
+            'viewings',
+            'conversations',
+            'feed',
+            'feed-options',
+            'seller-listings',
+            'saved',
+          ])
+            void queryClient.invalidateQueries({ queryKey: [key] });
+          armWatchdog();
         };
         socket.onmessage = (message: MessageEvent<string>) => {
+          delay = 1000;
+          armWatchdog();
           const event = JSON.parse(message.data) as {
             type: string;
-            data: { conversation_id?: string; viewing?: { conversation_id: string } };
+            data: {
+              conversation_id?: string;
+              listing_id?: string;
+              viewing?: { conversation_id: string };
+            };
           };
           if (event.type === 'heartbeat') return;
           const conversation = event.data.conversation_id || event.data.viewing?.conversation_id;
@@ -33,9 +51,15 @@ export function useRealtime(userId: string | undefined) {
             void queryClient.invalidateQueries({ queryKey: ['viewings', conversation] });
             void queryClient.invalidateQueries({ queryKey: ['conversations'] });
           }
+          if (event.type === 'block.changed') {
+            for (const key of ['messages', 'viewings', 'conversations', 'saved'])
+              void queryClient.invalidateQueries({ queryKey: [key] });
+          }
           if (['listing.status', 'block.changed'].includes(event.type))
             void queryClient.invalidateQueries({ queryKey: ['feed'] });
           if (event.type === 'listing.status') {
+            void queryClient.invalidateQueries({ queryKey: ['listing', event.data.listing_id] });
+            void queryClient.invalidateQueries({ queryKey: ['feed-options'] });
             void queryClient.invalidateQueries({ queryKey: ['seller-listings'] });
             void queryClient.invalidateQueries({ queryKey: ['saved'] });
           }
@@ -45,9 +69,15 @@ export function useRealtime(userId: string | undefined) {
         retry();
       }
     }
+    function armWatchdog() {
+      window.clearTimeout(watchdog);
+      watchdog = window.setTimeout(() => socket?.close(), 45000);
+    }
     function retry() {
+      window.clearTimeout(watchdog);
+      window.clearTimeout(timer);
       if (!stopped) {
-        timer = window.setTimeout(() => void connect(), delay);
+        timer = window.setTimeout(() => void connect(), delay * (0.8 + Math.random() * 0.4));
         delay = Math.min(30000, delay * 2);
       }
     }
@@ -55,6 +85,7 @@ export function useRealtime(userId: string | undefined) {
     return () => {
       stopped = true;
       window.clearTimeout(timer);
+      window.clearTimeout(watchdog);
       socket?.close();
     };
   }, [queryClient, userId]);

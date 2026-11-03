@@ -100,11 +100,12 @@ test('upload → feed → message → viewing', async ({ page, browser }) => {
     .toBeGreaterThan(0);
   await previewPage.screenshot({ path: '../docs/screenshots/desktop.png', fullPage: true });
   await previewPage.setViewportSize({ width: 390, height: 844 });
-  const priceBox = await previewPage.locator('.reel-price').first().boundingBox();
-  const navigationBox = await previewPage.locator('.mobile-nav').boundingBox();
-  expect(priceBox).not.toBeNull();
-  expect(navigationBox).not.toBeNull();
-  expect(priceBox!.y + priceBox!.height).toBeLessThanOrEqual(navigationBox!.y);
+  // Responsive video sizing updates after the browser's ResizeObserver callback.
+  await expect.poll(async () => {
+    const priceBox = await previewPage.locator('.reel-price').first().boundingBox();
+    const navigationBox = await previewPage.locator('.mobile-nav').boundingBox();
+    return priceBox && navigationBox ? priceBox.y + priceBox.height - navigationBox.y : Infinity;
+  }).toBeLessThanOrEqual(0);
   await previewPage.screenshot({ path: '../docs/screenshots/mobile.png', fullPage: true });
   await preview.close();
 });

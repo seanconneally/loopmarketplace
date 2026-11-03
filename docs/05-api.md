@@ -51,6 +51,7 @@ Paths below omit the `/api/v1` prefix except health/docs and WebSocket notes.
 | DELETE | `/listings/{listing_id}/save` | Bearer | Idempotently unsave listing | Present |
 | GET | `/listings/saved` | Bearer | Cursor page of saved listings | Present |
 | GET | `/feed` | Optional bearer | Filtered ranked or recency-fallback page | Present |
+| GET | `/feed/options` | Public | Up to 200 distinct makes from published inventory for discovery controls | Present |
 | POST | `/media/listings/{listing_id}/upload` | Owner + key | Allocate direct multipart upload | Present |
 | POST | `/media/{asset_id}/complete` | Owner | Submit part ETags, finalize and queue processing | Present |
 | GET | `/media/{asset_id}` | Owner | Poll asset status and media metadata | Present |
@@ -107,7 +108,7 @@ The inspected OTP implementation limits requests to ten per IP per ten minutes, 
 
 ## WebSocket protocol
 
-Gateway path: **`/ws`**. First obtain a one-use ticket over authenticated REST, open a same-origin WebSocket, and send the ticket as the **first frame**, not a query parameter. The first frame must arrive within ten seconds; the ticket expires after thirty. The gateway checks Origin, atomically consumes the ticket, validates current session/account state, subscribes only to the authenticated user's channel and revalidates access on its receive loop. Conversation events also recheck current membership/block policy. Invalid access closes with policy-violation code `1008`; reconnect with backoff and a fresh ticket. The client sends no other application frames after authentication.
+Gateway path: **`/ws`**. First obtain a one-use ticket over authenticated REST, open a same-origin WebSocket, and send the ticket as the **first frame**, not a query parameter. The first frame must arrive within ten seconds; the ticket expires after thirty. The gateway checks Origin, atomically consumes the ticket, validates current session/account state, subscribes only to the authenticated user's channel and revalidates idle access every fifteen seconds by default (`WEBSOCKET_AUTH_INTERVAL`, 1–30 seconds). Conversation events also recheck current membership/block policy. Invalid access closes with policy-violation code `1008`; reconnect with jittered backoff and a fresh ticket. On connection, the client refetches durable cached state and uses a 45-second silence watchdog. The client sends no other application frames after authentication.
 
 ```json
 {"ticket":"opaque-single-use-value"}
@@ -121,8 +122,8 @@ The implemented event shape is a discriminated `{type, data}` object serialized 
 | `message.created` | Server → conversation participants | `{conversation_id: UUID, message: MessageView}` | Deduplicate message ID; refetch durable history on reconnect |
 | `viewing.updated` | Server → conversation participants | `{viewing: ViewingView}` | Refetch structured conversation/viewing state; compare revision |
 | `message.read` | Server → participants | `{conversation_id: UUID, reader_id: UUID, message_id: UUID, read_at: ISODateTime}` | Present; durable message read timestamps remain authoritative |
-| `block.changed` | Server → the member changing the block | `{target_id: UUID}` | Present; refresh relevant views, while services already enforce blocks |
-| `heartbeat` | Server → authenticated client | `{}` | Present; transport liveness, sent when no domain event is available |
+| `block.changed` | Server → both affected members | `{target_id: UUID}` | Present; invalidate relevant views, while services already enforce blocks |
+| `heartbeat` | Server → authenticated client | `{}` | Present; transport liveness, sent every fifteen seconds while idle |
 | `session.revoked` | Server → affected session | `{reason: string}` | Planned convenience event; current server already revalidates and closes invalid access |
 
 `ListingStatus` uses draft, processing, pending_review, live, sold, failed and removed in local service transitions. `MessageView` contains `{id, conversation_id, sender_id, body, message_type, viewing_id, warnings, created_at, read_at}`, with nullable viewing/read fields. `ViewingView` contains `{id, conversation_id, proposed_by, starts_at, place, status, revision, history}`. These views exclude hidden account contact fields; message bodies and private meeting details remain participant data. Unknown event types should be ignored safely and trigger no mutation.

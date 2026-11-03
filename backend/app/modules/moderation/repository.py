@@ -24,6 +24,17 @@ class ModerationRepository:
             )
         )
 
+    async def blocked_peers(self, user: UUID, peers: set[UUID]) -> set[UUID]:
+        rows = await self.session.execute(
+            select(Block.blocker_id, Block.blocked_id).where(
+                or_(
+                    and_(Block.blocker_id == user, Block.blocked_id.in_(peers)),
+                    and_(Block.blocked_id == user, Block.blocker_id.in_(peers)),
+                )
+            )
+        )
+        return {second if first == user else first for first, second in rows}
+
     async def reports(self, after: UUID | None) -> list[Report]:
         query = select(Report).where(Report.status == "open")
         if after:

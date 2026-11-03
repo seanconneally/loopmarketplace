@@ -39,11 +39,19 @@ All published development ports bind to loopback. Compose works without copying 
 5. Report a listing/conversation, block a member, or mark your own live listing sold.
 6. The sample dealer has **Dealer studio** for [CSV inventory](docs/dealer-template.csv) plus matching owned videos; the sample moderator has the review queue.
 
-**My cars** is the seller dashboard at [localhost:8080/my-cars](http://localhost:8080/my-cars). It includes saved drafts and status filters, editing prices/details, pausing/resuming approved adverts, marking sold, and retrying or replacing failed videos. On mobile, open **Account → My cars**. See the [seller and upload guide](docs/seller-uploads.md).
+Discovery now includes keyword search, inventory-derived makes, custom price/year/mileage filters, fuel/gearbox filters and recommended/newest/price sorting. Search settings are kept in the URL. Open **Full advert** or tap a video title for a direct advert page; **Share advert** copies its link. Saved cars can be reopened, removed and paged through. See the [discovery and sharing guide](docs/discovery-sharing.md).
+
+The complete interface has a refreshed forest/lime design, self-hosted Manrope typography, consistent cards/forms/dialogs and responsive layouts across buyer, seller, dealer and moderator pages. See the [UI refresh and screenshots](docs/ui-refresh.md). Existing video posters remain; photos are deferred.
+
+**My cars** is the seller dashboard at [localhost:8080/my-cars](http://localhost:8080/my-cars). It includes saved drafts and status filters, editing prices/details, pausing/resuming approved adverts, marking sold, and retrying or replacing failed videos. On mobile, open **Account → Manage your adverts**. See the [seller and upload guide](docs/seller-uploads.md).
 
 Interrupted uploads resume on the **same advert**, sending only missing parts. Reselect the original video after a refresh; a full-file fingerprint prevents mixing different files. New processed videos retain audio; playback starts muted with an unmute button. Existing silent derivatives need to be regenerated from an audible original to gain sound.
 
 No outbound SMS, push or email is sent. Dealer/admin identities are development fixtures, not production account provisioning.
+
+The [reliability review](docs/reliability-review.md) records batched feed/inbox queries, reminder isolation, duplicate-job handling, session/reconnect recovery, complete chat pagination and remaining scaling limits. A bounded read-only gateway check is available with `node scripts/smoke-load.mjs` while the stack is running.
+
+Crash recovery, explicit session-loading/unavailable states, connection banners and tab-scoped advert/chat drafts are covered in [recovery and mobile readiness](docs/recovery-and-mobile.md). `npm run test:mobile` from `frontend/` runs Chromium/WebKit device-profile checks. Actual iPhone and Android hardware acceptance is still pending; emulation is recorded separately.
 
 ## All ten deliverables
 

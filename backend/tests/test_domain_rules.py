@@ -70,6 +70,20 @@ def test_listing_rejects_unowned_content_and_out_of_region_location() -> None:
         ListingCreate.model_validate({"rights_confirmed": False, "latitude": 0, "longitude": 0})
 
 
+def test_search_canonicalizes_text_and_rejects_reversed_ranges() -> None:
+    from app.modules.feed.schemas import FeedFilters
+
+    assert FeedFilters(q="  Toyota   YARIS ", make=" TOYOTA ").q == "toyota yaris"
+    assert FeedFilters(q="   ").q is None
+    for values in [
+        {"min_price": 500, "max_price": 100},
+        {"min_year": 2026, "max_year": 2020},
+        {"q": " ".join(["word"] * 9)},
+    ]:
+        with pytest.raises(ValidationError):
+            FeedFilters.model_validate(values)
+
+
 def test_multipart_completion_recovers_a_lost_success_response(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

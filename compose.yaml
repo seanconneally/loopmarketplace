@@ -7,6 +7,10 @@ x-app: &app
     JWT_SECRET: ${JWT_SECRET:-local-development-key-change-before-any-deployment}
     DATABASE_URL: postgresql+psycopg://motorloop:${POSTGRES_PASSWORD:-motorloop-local-only}@pgbouncer:6432/motorloop
     REDIS_URL: redis://redis:6379/0
+    REDIS_CONNECT_TIMEOUT: ${REDIS_CONNECT_TIMEOUT:-2}
+    REDIS_SOCKET_TIMEOUT: ${REDIS_SOCKET_TIMEOUT:-5}
+    REDIS_MAX_CONNECTIONS: ${REDIS_MAX_CONNECTIONS:-256}
+    WEBSOCKET_AUTH_INTERVAL: ${WEBSOCKET_AUTH_INTERVAL:-15}
     STORAGE_ENDPOINT: http://storage:9000
     STORAGE_PUBLIC_ENDPOINT: ${STORAGE_PUBLIC_ENDPOINT:-http://localhost:9000}
     STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-local-motorloop}

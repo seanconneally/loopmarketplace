@@ -26,6 +26,10 @@ class ListingService:
     def __init__(self, session: AsyncSession) -> None:
         self.session, self.repo = session, ListingRepository(session)
 
+    async def conversation_titles(self, listing_ids: set[UUID]) -> dict[UUID, str]:
+        """Supply titles only; the caller must authorize conversation membership first."""
+        return await self.repo.titles(listing_ids)
+
     async def create(self, user: UUID, data: ListingCreate, key: str) -> Listing:
         """Create a draft once for a seller/key pair, rejecting conflicting replays."""
         owner = await UserService(self.session).active(user)
@@ -175,8 +179,8 @@ class ListingService:
 
     async def save(self, listing_id: UUID, user: UUID, saved: bool) -> None:
         """Set saved state idempotently."""
-        await self.detail(listing_id, user)
         if saved:
+            await self.detail(listing_id, user)
             await self.session.execute(
                 insert(Save).values(user_id=user, listing_id=listing_id).on_conflict_do_nothing()
             )
@@ -192,6 +196,10 @@ class ListingService:
     async def is_saved(self, user: UUID, listing: UUID) -> bool:
         """Expose saved state without leaking our repository."""
         return await self.repo.saved(user, listing)
+
+    async def saved_subset(self, user: UUID, ids: list[UUID]) -> set[UUID]:
+        """Supply saved flags for a bounded feed batch in one query."""
+        return await self.repo.saved_subset(user, ids)
 
     async def moderation_context(self, listing_id: UUID) -> tuple[str, int]:
         """Supply text and its edit revision to the scanner without exposing storage details."""
@@ -209,18 +217,39 @@ class ListingService:
 
     async def saved_page(self, user: UUID, cursor: str | None) -> ListingPage:
         """Return saved listings using keyset pagination."""
-        after = UUID(decode_cursor(cursor)["id"]) if cursor else None
-        ids = await self.repo.saved_ids(user, after, 21)
-        items = []
+        after = None
+        if cursor:
+            state = decode_cursor(cursor)
+            require(
+                state.get("scope") == "saved" and state.get("user") == str(user),
+                400,
+                "cursor_mismatch",
+                "Restart your saved list after changing account.",
+            )
+            after = UUID(state["id"])
+        items: list[ListingView] = []
+        more = False
         from app.core.errors import DomainError
 
-        for listing_id in ids[:20]:
-            try:
-                items.append(await self.detail(listing_id, user))
-            except DomainError:
-                continue
+        for _ in range(10):
+            remaining = 20 - len(items)
+            ids = await self.repo.saved_ids(user, after, remaining + 1)
+            batch, more = ids[:remaining], len(ids) > remaining
+            if not batch:
+                break
+            for listing_id in batch:
+                try:
+                    items.append(await self.detail(listing_id, user))
+                except DomainError:
+                    continue
+            after = batch[-1]
+            if len(items) == 20 or not more:
+                break
         return ListingPage(
-            items=items, next_cursor=encode_cursor({"id": str(ids[19])}) if len(ids) > 20 else None
+            items=items,
+            next_cursor=encode_cursor({"id": str(after), "scope": "saved", "user": str(user)})
+            if more and after
+            else None,
         )
 
     async def seller_detail(self, listing_id: UUID, user: UUID) -> SellerListingView:

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Link, useLocation } from 'react-router-dom';
 import {
   BadgeCheck,
   Bookmark,
@@ -16,28 +17,35 @@ import {
 import { euros, mutation, request, type Listing } from '../../api/client';
 import { useAuth } from '../../shared/Auth';
 import { Modal } from '../../shared/Modal';
+import { ShareAdvert } from '../../shared/ShareAdvert';
 
 export function ListingDetails({
   listing,
   onSave,
   onMessage,
   requireAuth,
+  standalone = false,
+  saving = false,
 }: {
   listing: Listing;
   onSave: () => void;
   onMessage: () => void;
   requireAuth: () => void;
+  standalone?: boolean;
+  saving?: boolean;
 }) {
   const auth = useAuth();
   const queryClient = useQueryClient();
+  const location = useLocation();
   const isOwner = auth.user?.id === listing.seller.id;
   const [report, setReport] = useState(false);
   const [reason, setReason] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [busy, setBusy] = useState(false);
   return (
     <aside className="listing-panel">
       <div className="panel-kicker">
-        A CLOSER LOOK <span>↗</span>
+        THE DETAILS <span>↗</span>
       </div>
       <div className="listing-title">
         <div>
@@ -48,7 +56,8 @@ export function ListingDetails({
         </div>
         <button
           className={`icon-button ${listing.saved ? 'saved-icon' : ''}`}
-          aria-label="Save this car"
+          aria-label={listing.saved ? 'Unsave this car' : 'Save this car'}
+          disabled={saving}
           onClick={onSave}
         >
           <Bookmark size={21} fill={listing.saved ? 'currentColor' : 'none'} />
@@ -58,6 +67,13 @@ export function ListingDetails({
         {euros(listing.price_cents)}
         <span>Asking price</span>
       </div>
+      {listing.status !== 'live' && (
+        <p className="listing-availability" role="status">
+          {listing.status === 'sold'
+            ? 'This car has been sold.'
+            : 'This advert is not currently live.'}
+        </p>
+      )}
       <div className="spec-grid">
         <div>
           <CalendarDays />
@@ -105,20 +121,52 @@ export function ListingDetails({
       </div>
       <button
         className="button dark message-cta"
+        disabled={
+          busy ||
+          (!isOwner && listing.status !== 'live') ||
+          (isOwner && !['live', 'paused'].includes(listing.status))
+        }
         onClick={() => {
           if (!isOwner) {
             onMessage();
             return;
           }
+          setBusy(true);
           void request(`/listings/${listing.id}/sold`, mutation({}))
-            .then(() => queryClient.invalidateQueries({ queryKey: ['feed'] }))
-            .catch((error: Error) => setFeedback(error.message));
+            .then(() =>
+              Promise.all(
+                ['feed', 'saved', 'listing', 'seller-listings'].map((key) =>
+                  queryClient.invalidateQueries({ queryKey: [key] }),
+                ),
+              ),
+            )
+            .catch((error: Error) => setFeedback(error.message))
+            .finally(() => setBusy(false));
         }}
       >
         <MessageCircle size={19} />
-        {isOwner ? 'Mark as sold' : 'Message seller'}
+        {busy
+          ? 'Updating…'
+          : listing.status === 'sold'
+            ? 'Sold'
+            : isOwner
+              ? 'Mark as sold'
+              : 'Message seller'}
         <ChevronRight size={18} />
       </button>
+      <div className="listing-link-actions">
+        <ShareAdvert id={listing.id} title={listing.title} />
+        {!standalone && (
+          <Link to={`/cars/${listing.id}`} state={{ from: location.pathname + location.search }}>
+            Full advert <ChevronRight size={14} />
+          </Link>
+        )}
+        {isOwner && (
+          <Link to="/my-cars">
+            Manage advert <ChevronRight size={14} />
+          </Link>
+        )}
+      </div>
       <div className="safety-card">
         <div className="safety-icon">
           <ShieldCheck size={21} />

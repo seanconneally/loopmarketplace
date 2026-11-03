@@ -23,6 +23,13 @@ celery.conf.update(
     broker_transport_options={"visibility_timeout": 600},
     task_time_limit=300,
     broker_connection_retry_on_startup=True,
+    broker_connection_timeout=3,
+    task_publish_retry_policy={
+        "max_retries": 2,
+        "interval_start": 0,
+        "interval_step": 0.5,
+        "interval_max": 1,
+    },
 )
 log = structlog.get_logger()
 
@@ -46,7 +53,9 @@ async def process_event(event_id: UUID) -> None:
     from app.modules.users.service import UserService
 
     async with sessions() as session:
-        event = await session.scalar(select(Outbox).where(Outbox.id == event_id).with_for_update())
+        event = await session.scalar(
+            select(Outbox).where(Outbox.id == event_id).with_for_update(skip_locked=True)
+        )
         if event is None or event.completed_at is not None:
             return
         try:
@@ -93,8 +102,10 @@ async def process_event(event_id: UUID) -> None:
         except Exception as exc:
             await session.rollback()
             # Re-open after rollback so business effects cannot leak through a failed handler.
-            failed = await session.get(Outbox, event_id)
-            if failed:
+            failed = await session.scalar(
+                select(Outbox).where(Outbox.id == event_id).with_for_update(skip_locked=True)
+            )
+            if failed and failed.completed_at is None:
                 failed.last_error = type(exc).__name__  # Never persist provider bodies or secrets.
                 failed.lease_until = None
                 failed.available_at = utcnow() + timedelta(seconds=min(300, 2**failed.attempts))

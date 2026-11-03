@@ -23,6 +23,10 @@ class UserService:
         assert user is not None
         return user
 
+    async def active_names(self, user_ids: set[UUID]) -> dict[UUID, str]:
+        """Expose bounded public identity facts for authorized conversation summaries."""
+        return await self.repo.active_names(user_ids)
+
     async def verify_phone(self, phone: str) -> User:
         """Create or verify a phone identity after successful OTP consumption."""
         user = await self.repo.by_phone(phone)

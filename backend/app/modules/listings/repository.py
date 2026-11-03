@@ -12,6 +12,17 @@ class ListingRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    async def titles(self, listing_ids: set[UUID]) -> dict[UUID, str]:
+        return dict(
+            (
+                await self.session.execute(
+                    select(Listing.id, Listing.title).where(Listing.id.in_(listing_ids))
+                )
+            )
+            .tuples()
+            .all()
+        )
+
     async def get(self, listing_id: UUID, lock: bool = False) -> Listing | None:
         query = select(Listing).where(Listing.id == listing_id)
         return cast(
@@ -34,6 +45,13 @@ class ListingRepository:
 
     async def saved(self, user: UUID, listing: UUID) -> bool:
         return await self.session.get(Save, (user, listing)) is not None
+
+    async def saved_subset(self, user: UUID, ids: list[UUID]) -> set[UUID]:
+        return set(
+            await self.session.scalars(
+                select(Save.listing_id).where(Save.user_id == user, Save.listing_id.in_(ids))
+            )
+        )
 
     async def saved_ids(self, user: UUID, after: UUID | None, limit: int) -> list[UUID]:
         query = select(Save.listing_id).where(Save.user_id == user)

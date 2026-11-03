@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import { Link, useLocation } from 'react-router-dom';
 import { Bookmark, MapPin, MessageCircle, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import { euros, mutation, request, type Listing } from '../../api/client';
 import { useAuth } from '../../shared/Auth';
@@ -10,17 +11,21 @@ export function Reel({
   onActive,
   onSave,
   onMessage,
+  saving = false,
 }: {
   listing: Listing;
   nearby: boolean;
   onActive: () => void;
   onSave: () => void;
   onMessage: () => void;
+  saving?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const auth = useAuth();
+  const location = useLocation();
+  const isOwner = auth.user?.id === listing.seller.id;
   const [visible, setVisible] = useState(false);
   const [muted, setMuted] = useState(true);
   const [paused, setPaused] = useState(false);
@@ -167,13 +172,18 @@ export function Reel({
           onClick={onSave}
           aria-label={listing.saved ? 'Unsave listing' : 'Save listing'}
           className={listing.saved ? 'is-saved' : ''}
+          disabled={saving}
         >
           <Bookmark size={22} fill={listing.saved ? 'currentColor' : 'none'} />
           <span>Save</span>
         </button>
-        <button onClick={onMessage} aria-label="Message seller">
+        <button
+          onClick={onMessage}
+          disabled={!isOwner && listing.status !== 'live'}
+          aria-label={isOwner ? 'Manage advert' : 'Message seller'}
+        >
           <MessageCircle size={22} />
-          <span>Chat</span>
+          <span>{isOwner ? 'Manage' : listing.status === 'sold' ? 'Sold' : 'Chat'}</span>
         </button>
         <button
           onClick={() => setMuted(!muted)}
@@ -191,7 +201,15 @@ export function Reel({
           <MapPin size={13} />
           {listing.area}, Dublin
         </div>
-        <h2>{listing.title}</h2>
+        <h2>
+          <Link
+            to={`/cars/${listing.id}`}
+            state={{ from: location.pathname + location.search }}
+            aria-label={`View ${listing.title}`}
+          >
+            {listing.title}
+          </Link>
+        </h2>
         <p>
           {listing.car.year} <span>·</span> {listing.car.mileage_km.toLocaleString()} km{' '}
           <span>·</span> {listing.car.fuel}

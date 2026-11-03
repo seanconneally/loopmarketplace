@@ -364,6 +364,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/feed/options': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Options */
+    get: operations['options_api_v1_feed_options_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/conversations': {
     parameters: {
       query?: never;
@@ -766,6 +783,11 @@ export interface components {
        * @default 1
        */
       value: number;
+    };
+    /** FeedOptions */
+    FeedOptions: {
+      /** Makes */
+      makes: string[];
     };
     /** FeedPage */
     FeedPage: {
@@ -3988,7 +4010,7 @@ export interface operations {
   feed_api_v1_feed_get: {
     parameters: {
       query?: {
-        cursor?: string | null;
+        q?: string | null;
         latitude?: number;
         longitude?: number;
         radius_km?: number;
@@ -3997,7 +4019,12 @@ export interface operations {
         make?: string | null;
         min_year?: number;
         max_year?: number;
+        max_mileage?: number;
+        fuel?: ('petrol' | 'diesel' | 'electric' | 'hybrid') | null;
+        transmission?: ('manual' | 'automatic') | null;
+        sort?: 'recommended' | 'newest' | 'price_asc' | 'price_desc';
         region_id?: string;
+        cursor?: string | null;
       };
       header?: never;
       path?: never;
@@ -4012,6 +4039,116 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['FeedPage'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      410: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+      /** @description Consistent application error envelope */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorEnvelope'];
+        };
+      };
+    };
+  };
+  options_api_v1_feed_options_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['FeedOptions'];
         };
       };
       /** @description Consistent application error envelope */

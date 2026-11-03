@@ -21,6 +21,7 @@ import {
 } from '../../api/client';
 import { useAuth } from '../../shared/Auth';
 import { Modal } from '../../shared/Modal';
+import { PageHeading } from '../../shared/PageHeading';
 import { ListingFields } from './ListingFields';
 import { listingDetails } from './listingForm';
 import { uploadVideo } from './uploads';
@@ -116,16 +117,58 @@ export function SellerDashboard({ create }: { create: () => void }) {
   }
   return (
     <>
-      <div className="page-heading seller-heading">
+      <PageHeading
+        className="seller-heading"
+        eyebrow="YOUR SELLER WORKSPACE"
+        title={
+          <>
+            Your cars. <span>All in one place.</span>
+          </>
+        }
+        description="Follow your videos, update your details and manage what buyers see."
+        action={
+          <button className="button dark" onClick={create}>
+            <Plus size={16} />
+            Add a car
+          </button>
+        }
+      />
+      <div className="seller-overview">
         <div>
-          <div className="eyebrow">YOUR SELLER DASHBOARD</div>
-          <h1>Your cars. Your next chapter.</h1>
-          <p>Keep every advert moving, from first draft to keys handed over.</p>
+          <span className="overview-icon">
+            <CarFront size={20} />
+          </span>
+          <div>
+            <span>Adverts in this view</span>
+            <strong>
+              {query.isPending ? '—' : `${items.length}${query.hasNextPage ? '+' : ''}`}
+            </strong>
+          </div>
         </div>
-        <button className="button dark" onClick={create}>
-          <Plus size={16} />
-          Add a car
-        </button>
+        <div>
+          <span className="overview-icon live">
+            <Play size={19} />
+          </span>
+          <div>
+            <span>Live in this view</span>
+            <strong>
+              {query.isPending ? '—' : items.filter((item) => item.status === 'live').length}
+            </strong>
+          </div>
+        </div>
+        <div>
+          <span className="overview-icon attention">
+            <Film size={20} />
+          </span>
+          <div>
+            <span>To finish in this view</span>
+            <strong>
+              {query.isPending
+                ? '—'
+                : items.filter((item) => ['draft', 'failed'].includes(item.status)).length}
+            </strong>
+          </div>
+        </div>
       </div>
       <div className="seller-toolbar">
         <label>
@@ -363,10 +406,10 @@ function EditAdvert({
     }
   }
   return (
-    <Modal title="A fresh look for your advert." close={close}>
+    <Modal title="Edit your advert" close={close}>
       <form className="form-stack" onSubmit={(event) => void submit(event)}>
         <p className="muted">
-          Update the price, details or description. Changes are checked before publication.
+          Keep buyers up to date. Changes are checked before your advert appears.
         </p>
         <ListingFields
           value={{ ...listing, rights_confirmed: true, category: 'cars', region_id: 'ie-dublin' }}
