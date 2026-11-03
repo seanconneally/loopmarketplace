@@ -1,0 +1,127 @@
+name: motorloop
+
+x-app: &app
+  build: ./backend
+  environment: &app-env
+    APP_ENV: ${APP_ENV:-development}
+    JWT_SECRET: ${JWT_SECRET:-local-development-key-change-before-any-deployment}
+    DATABASE_URL: postgresql+psycopg://motorloop:${POSTGRES_PASSWORD:-motorloop-local-only}@pgbouncer:6432/motorloop
+    REDIS_URL: redis://redis:6379/0
+    STORAGE_ENDPOINT: http://storage:9000
+    STORAGE_PUBLIC_ENDPOINT: ${STORAGE_PUBLIC_ENDPOINT:-http://localhost:9000}
+    STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-local-motorloop}
+    STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-local-motorloop-storage-only}
+    PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+    MEDIA_PUBLIC_URL: ${MEDIA_PUBLIC_URL:-http://localhost:8080/media}
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.5
+    environment:
+      POSTGRES_USER: motorloop
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-motorloop-local-only}
+      POSTGRES_DB: motorloop
+    ports: ["127.0.0.1:15432:5432"]
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U motorloop -d motorloop"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+  pgbouncer:
+    build: ./infra/pgbouncer
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-motorloop-local-only}
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=$$POSTGRES_PASSWORD psql -h 127.0.0.1 -p 6432 -U motorloop -d motorloop -c 'SELECT 1' >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+  storage:
+    image: chrislusf/seaweedfs:4.48
+    command: ["mini", "-dir=/data", "-s3.port=9000"]
+    environment:
+      AWS_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY:-local-motorloop}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_SECRET_KEY:-local-motorloop-storage-only}
+    ports: ["127.0.0.1:9000:9000"]
+    volumes: ["storage-data:/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9333/cluster/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+  init:
+    <<: *app
+    restart: "no"
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql+psycopg://motorloop:${POSTGRES_PASSWORD:-motorloop-local-only}@postgres:5432/motorloop
+    command: ["sh", "-c", "alembic upgrade head && python -m app.seed"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      storage: {condition: service_healthy}
+      redis: {condition: service_healthy}
+  api:
+    <<: *app
+    depends_on:
+      init: {condition: service_completed_successfully}
+      pgbouncer: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+  worker:
+    <<: *app
+    command: ["celery", "-A", "app.worker.celery", "worker", "--loglevel=INFO", "--queues=default,media", "--concurrency=2"]
+    depends_on:
+      init: {condition: service_completed_successfully}
+      pgbouncer: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.worker.celery inspect ping -d celery@$$HOSTNAME --timeout 3 | grep -q pong"]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 20s
+  relay:
+    <<: *app
+    command: ["python", "-m", "app.relay"]
+    depends_on:
+      init: {condition: service_completed_successfully}
+      pgbouncer: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import pathlib,time; assert time.time()-float(pathlib.Path('/tmp/relay-health').read_text()) < 30"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  nginx:
+    build:
+      context: .
+      dockerfile: infra/nginx/Dockerfile
+    ports: ["127.0.0.1:8080:80"]
+    depends_on:
+      api: {condition: service_healthy}
+      storage: {condition: service_healthy}
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  storage-data:

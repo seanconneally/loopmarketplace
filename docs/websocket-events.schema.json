@@ -1,0 +1,374 @@
+{
+  "$defs": {
+    "BlockChanged": {
+      "properties": {
+        "type": {
+          "const": "block.changed",
+          "title": "Type",
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/$defs/BlockData"
+        }
+      },
+      "required": [
+        "type",
+        "data"
+      ],
+      "title": "BlockChanged",
+      "type": "object"
+    },
+    "BlockData": {
+      "properties": {
+        "target_id": {
+          "format": "uuid",
+          "title": "Target Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_id"
+      ],
+      "title": "BlockData",
+      "type": "object"
+    },
+    "Heartbeat": {
+      "properties": {
+        "type": {
+          "const": "heartbeat",
+          "title": "Type",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Data",
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "data"
+      ],
+      "title": "Heartbeat",
+      "type": "object"
+    },
+    "ListingData": {
+      "properties": {
+        "listing_id": {
+          "format": "uuid",
+          "title": "Listing Id",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "listing_id",
+        "status"
+      ],
+      "title": "ListingData",
+      "type": "object"
+    },
+    "ListingStatus": {
+      "properties": {
+        "type": {
+          "const": "listing.status",
+          "title": "Type",
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/$defs/ListingData"
+        }
+      },
+      "required": [
+        "type",
+        "data"
+      ],
+      "title": "ListingStatus",
+      "type": "object"
+    },
+    "MessageCreated": {
+      "properties": {
+        "type": {
+          "const": "message.created",
+          "title": "Type",
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/$defs/MessageData"
+        }
+      },
+      "required": [
+        "type",
+        "data"
+      ],
+      "title": "MessageCreated",
+      "type": "object"
+    },
+    "MessageData": {
+      "properties": {
+        "conversation_id": {
+          "format": "uuid",
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "message": {
+          "$ref": "#/$defs/MessageView"
+        }
+      },
+      "required": [
+        "conversation_id",
+        "message"
+      ],
+      "title": "MessageData",
+      "type": "object"
+    },
+    "MessageRead": {
+      "properties": {
+        "type": {
+          "const": "message.read",
+          "title": "Type",
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/$defs/ReadData"
+        }
+      },
+      "required": [
+        "type",
+        "data"
+      ],
+      "title": "MessageRead",
+      "type": "object"
+    },
+    "MessageView": {
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "conversation_id": {
+          "format": "uuid",
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "sender_id": {
+          "format": "uuid",
+          "title": "Sender Id",
+          "type": "string"
+        },
+        "body": {
+          "title": "Body",
+          "type": "string"
+        },
+        "message_type": {
+          "title": "Message Type",
+          "type": "string"
+        },
+        "viewing_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Viewing Id"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "read_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Read At"
+        }
+      },
+      "required": [
+        "id",
+        "conversation_id",
+        "sender_id",
+        "body",
+        "message_type",
+        "viewing_id",
+        "warnings",
+        "created_at",
+        "read_at"
+      ],
+      "title": "MessageView",
+      "type": "object"
+    },
+    "ReadData": {
+      "properties": {
+        "conversation_id": {
+          "format": "uuid",
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "reader_id": {
+          "format": "uuid",
+          "title": "Reader Id",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "read_at": {
+          "format": "date-time",
+          "title": "Read At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "conversation_id",
+        "reader_id",
+        "message_id",
+        "read_at"
+      ],
+      "title": "ReadData",
+      "type": "object"
+    },
+    "ViewingData": {
+      "properties": {
+        "viewing": {
+          "$ref": "#/$defs/ViewingView"
+        }
+      },
+      "required": [
+        "viewing"
+      ],
+      "title": "ViewingData",
+      "type": "object"
+    },
+    "ViewingUpdated": {
+      "properties": {
+        "type": {
+          "const": "viewing.updated",
+          "title": "Type",
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/$defs/ViewingData"
+        }
+      },
+      "required": [
+        "type",
+        "data"
+      ],
+      "title": "ViewingUpdated",
+      "type": "object"
+    },
+    "ViewingView": {
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "conversation_id": {
+          "format": "uuid",
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "proposed_by": {
+          "format": "uuid",
+          "title": "Proposed By",
+          "type": "string"
+        },
+        "starts_at": {
+          "format": "date-time",
+          "title": "Starts At",
+          "type": "string"
+        },
+        "place": {
+          "title": "Place",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "revision": {
+          "title": "Revision",
+          "type": "integer"
+        },
+        "history": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "History",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "conversation_id",
+        "proposed_by",
+        "starts_at",
+        "place",
+        "status",
+        "revision",
+        "history"
+      ],
+      "title": "ViewingView",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "block.changed": "#/$defs/BlockChanged",
+      "heartbeat": "#/$defs/Heartbeat",
+      "listing.status": "#/$defs/ListingStatus",
+      "message.created": "#/$defs/MessageCreated",
+      "message.read": "#/$defs/MessageRead",
+      "viewing.updated": "#/$defs/ViewingUpdated"
+    },
+    "propertyName": "type"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/MessageCreated"
+    },
+    {
+      "$ref": "#/$defs/MessageRead"
+    },
+    {
+      "$ref": "#/$defs/ViewingUpdated"
+    },
+    {
+      "$ref": "#/$defs/ListingStatus"
+    },
+    {
+      "$ref": "#/$defs/BlockChanged"
+    },
+    {
+      "$ref": "#/$defs/Heartbeat"
+    }
+  ]
+}

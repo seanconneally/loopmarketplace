@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.egg-info
+.git
+.env
+frontend/playwright-report
+frontend/test-results
+frontend/tests/fixtures

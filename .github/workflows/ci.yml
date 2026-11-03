@@ -1,0 +1,61 @@
+name: Check marketplace
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e './backend[dev]'
+      - working-directory: backend
+        run: |
+          ruff check app tests scripts
+          ruff format --check app tests scripts
+          mypy app
+          pytest -m 'not integration'
+          python scripts/export_contracts.py
+      - run: git diff --exit-code -- docs/openapi.json docs/websocket-events.schema.json
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run: {working-directory: frontend}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci
+      - run: npm run generate:api && npx prettier --write src/api/generated.ts
+      - run: git diff --exit-code -- src/api/generated.ts
+      - run: npm run lint && npm run format:check && npm run build && npm test
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: docker compose up -d --build --wait --wait-timeout 300
+      - run: pip install -e './backend[dev]'
+      - name: Real PostgreSQL/Redis integration and migration drift
+        working-directory: backend
+        env: {RUN_INTEGRATION: '1'}
+        run: |
+          pytest -m integration
+          alembic check
+      - name: Browser upload, chat and viewing
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          mkdir -p tests/fixtures
+          docker compose exec -T api python scripts/make_test_video.py /tmp/walkaround.mp4
+          docker compose cp api:/tmp/walkaround.mp4 tests/fixtures/walkaround.mp4
+          npm run test:e2e
+      - if: failure()
+        run: docker compose logs --tail=150
+      - if: always()
+        run: docker compose down

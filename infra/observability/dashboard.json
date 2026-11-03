@@ -1,0 +1,12 @@
+{
+  "uid": "motorloop", "title": "Motorloop · local operations", "schemaVersion": 39,
+  "timezone": "browser", "refresh": "15s", "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {"id":1,"type":"timeseries","title":"API request rate","gridPos":{"x":0,"y":0,"w":12,"h":8},"targets":[{"expr":"sum by (route) (rate(motorloop_http_requests_total[5m]))","legendFormat":"{{route}}"}]},
+    {"id":2,"type":"timeseries","title":"API p95 seconds","gridPos":{"x":12,"y":0,"w":12,"h":8},"targets":[{"expr":"histogram_quantile(0.95, sum by (le, route) (rate(motorloop_http_seconds_bucket[5m])))","legendFormat":"{{route}}"}]},
+    {"id":3,"type":"stat","title":"Pending work","gridPos":{"x":0,"y":8,"w":6,"h":5},"targets":[{"expr":"motorloop_outbox_pending"}]},
+    {"id":4,"type":"stat","title":"Oldest work (s)","gridPos":{"x":6,"y":8,"w":6,"h":5},"targets":[{"expr":"motorloop_outbox_oldest_seconds"}]},
+    {"id":5,"type":"stat","title":"Dead letters","gridPos":{"x":12,"y":8,"w":6,"h":5},"targets":[{"expr":"motorloop_dead_letters"}]},
+    {"id":6,"type":"stat","title":"Active sockets (this API)","gridPos":{"x":18,"y":8,"w":6,"h":5},"targets":[{"expr":"motorloop_websockets"}]}
+  ]
+}

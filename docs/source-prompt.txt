@@ -1,0 +1,219 @@
+Short-Form Marketplace — System Design Prompt
+Nov 2, 2026 · @seán
+How to use this
+Paste everything from Role and goal down into Claude or Claude Code as one message. Fill in the [bracketed] placeholders first: app name, launch region and scale targets. The prompt tells the model to pause after the big deliverables so you can steer it before it writes code.
+Role and goal
+You are a senior staff engineer and system architect. Design a production-ready system for [APP NAME] that is scalable, maintainable and readable, then scaffold the codebase.
+• Favour simple, well-understood choices over clever ones. A solo developer must be able to run and reason about it.
+• Explain each major trade-off in one or two sentences.
+• Where you lack information, state your assumption in one line and keep going.
+• Use the stack below unless you have a strong reason not to; if so, say why.
+Product overview
+[APP NAME] is a video-first local marketplace: sellers post short vertical video adverts (15–60 s) of items for sale, starting with used cars. Buyers scroll a full-screen, TikTok-style feed, message the seller in-app, and arrange a viewing in person, as they would on Facebook Marketplace.
+Core user journeys:
+1. Seller posts. Signs up, verifies phone number, records or uploads a video, adds structured details (make, model, year, mileage, fuel, transmission, price, location), publishes.
+2. Buyer browses. Scrolls the feed filtered by distance, price and make; taps through to listing details; saves listings.
+3. Buyer contacts seller. Taps Message on a listing; both chat in real time.
+4. Viewing arranged. Either party proposes a time and public meeting place in the chat; the other accepts, declines or counters.
+5. Sale closes. Seller marks the listing sold and it leaves the feed. Money changes hands in person; there are no in-app payments.
+6. Safety. Anyone can report or block a listing or user; moderators review reports.
+7. Dealer seeding. A verified dealer account can bulk-upload many listings (CSV of details plus videos) so the feed has stock at launch.
+MVP scope
+The MVP is cars only, in one region ([LAUNCH REGION]), on a mobile-first responsive web app. Design every module so a second category or region is configuration, not a rewrite.
+In the MVP
+• Phone-verified accounts (private sellers, buyers, dealers) and an admin role
+• Video upload, processing and adaptive playback
+• Feed with distance, price, make and year filters; listing detail page; saved listings
+• 1:1 real-time messaging with push and email notifications
+• Structured viewing proposals inside the chat
+• Report, block, and an admin moderation queue
+• Dealer bulk upload (CSV plus videos)
+• Basic analytics events (impressions, watch time, saves, messages)
+Later, not now
+• In-app payments or escrow
+• Native iOS and Android apps
+• A learned recommendation model
+• Categories beyond cars, and multiple regions or languages
+• In-app video editing beyond trimming
+• Vehicle history checks by registration
+Tech stack and constraints
+Build a modular monolith on this stack; it must run cheaply at launch and reach [100k] monthly active users without a rewrite.
+Layer
+Choice
+Role
+Backend
+Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2 (async), Alembic
+REST and WebSocket API, migrations
+Database
+PostgreSQL 16 with PostGIS, PgBouncer
+Source of truth; radius queries on listing location
+Cache and realtime
+Redis
+Feed cache, rate limits, token denylist, pub/sub for chat fan-out
+Background jobs
+Redis-backed queue (Celery or Dramatiq; pick one and justify)
+Video processing, notifications, moderation scans
+Video
+S3-compatible object storage plus CDN; transcoding via a managed service (Mux or Cloudflare Stream) or ffmpeg workers, behind a VideoProvider interface
+Direct uploads, HLS adaptive playback, posters
+Frontend
+React with TypeScript, Vite, React Router, TanStack Query, Tailwind, hls.js
+Mobile-first PWA with a virtualised vertical feed
+Edge
+Nginx
+TLS, reverse proxy, WebSocket upgrade, rate limiting, static React build
+Auth
+Short-lived JWT access tokens, rotating refresh tokens in httpOnly cookies, SMS OTP
+Phone-verified accounts
+Infra
+Docker, docker-compose locally, [DEPLOY TARGET], GitHub Actions
+One-command local setup, CI/CD
+Observability
+Structured JSON logs, OpenTelemetry, Prometheus and Grafana, Sentry
+Logs, metrics, traces, errors
+Constraints:
+• One developer maintains this, so prefer managed services where they remove whole categories of ops work.
+• The API never proxies video bytes; clients upload straight to storage with presigned URLs.
+• All API containers are stateless and horizontally scalable.
+• Hosting and data stay in the EU.
+Architecture
+Use a modular monolith: one FastAPI codebase split into domain modules, deployed as stateless API containers plus separate worker containers. Split a module into its own service only when load or ownership demands it, and name which module would go first.
+Modules: auth, users, listings, media, feed, messaging, viewings, moderation, notifications, analytics. Modules talk through service interfaces or domain events, never by querying each other's tables.
+Request paths:
+• Video segments, posters and the static React build come from the CDN.
+• API and WebSocket traffic goes client → Nginx → FastAPI.
+• FastAPI reads and writes Postgres, uses Redis for cache, rate limits and pub/sub, and enqueues slow work.
+• Workers process uploads, run moderation scans and send push and email notifications.
+Produce a Mermaid component diagram of this, plus sequence diagrams for the flows below.
+The picture is for your reference; the text above carries the same structure for the model.
+Core flows
+Design these four flows in detail; they carry most of the load and most of the risk.
+Upload and video pipeline
+1. Client asks to upload; the API creates a listing in draft and returns a presigned multipart upload URL (limits: [60 s], [500 MB], MP4 or MOV).
+2. Client uploads straight to object storage.
+3. A completion callback enqueues a job: validate, transcode to HLS renditions, make a poster frame and thumbnails, strip location metadata, run automated moderation.
+4. Listing moves processing → pending_review or live. Jobs are idempotent, retry with backoff and land in a dead-letter queue on repeated failure.
+5. Client learns the status by WebSocket event, with polling as a fallback.
+Feed
+• Cursor-based pagination only, never offset.
+• MVP ranking: listings within the buyer's radius and filters, ordered by recency with simple boosts for engagement (watch-through, saves, messages) and penalties for already-seen items.
+• Put ranking behind a FeedRanker interface so a learned model can replace it later.
+• Cache candidate sets per geographic cell in Redis with a short TTL; apply per-user filtering on top.
+• Client plays only the visible video, preloads the next two at low bitrate, and releases off-screen players.
+• Client sends impression and watch events in batches to an events endpoint; store them append-only for ranking and analytics.
+Messaging
+• One conversation per (listing, buyer) pair.
+• Send over REST with a client-generated idempotency key; persist first, then deliver over WebSocket.
+• Fan out across API instances with Redis pub/sub; offline recipients get a push notification.
+• Read receipts; typing indicators are optional.
+• Phone numbers and emails stay hidden unless a user chooses to share them.
+• Flag messages with common scam patterns, such as deposit requests, off-platform payment links and courier stories, and warn the recipient.
+• Block and report from any conversation.
+Viewings
+• Either party proposes a structured viewing (time plus place) inside the chat; the other accepts, declines or counters.
+• Prompt users towards busy public meeting places and show safety tips before the first viewing.
+• Send reminders and offer a calendar (.ics) export.
+Data model and API
+Start from these entities and refine them; write the result as SQL DDL with indexes, constraints and a one-line reason for each index.
+Entity
+Key fields
+Notes
+users
+id, phone, email, role, verified_at, status
+Roles: buyer, seller, dealer, admin
+dealers
+user_id, business name, registration number, address
+Verified business sellers
+listings
+id, seller_id, category, status, title, price (integer cents), currency, location (PostGIS point), attributes (JSONB), sold_at
+Car fields (make, model, year, mileage, fuel, transmission) in a typed table or validated JSONB; justify the choice
+media_assets
+id, listing_id, provider, status, playback URL, poster URL, duration, perceptual hash
+Hash catches reposted or stolen videos
+saves
+user_id, listing_id
+Unique pair
+conversations
+id, listing_id, buyer_id, seller_id, last_message_at
+Unique per listing and buyer
+messages
+id, conversation_id, sender_id, body, idempotency key, created_at, read_at
+Plan partitioning for scale
+viewings
+id, conversation_id, proposed_by, time, place, status
+Proposed, accepted, declined, countered, cancelled
+reports and blocks
+reporter, target type and id, reason, status
+Feed the moderation queue
+moderation_actions
+moderator, target, action, reason
+Audit trail and statements of reason
+events
+user_id, listing_id, type, value, created_at
+Append-only; plan partitioning or offload
+API rules:
+• REST under /api/v1, with the OpenAPI spec generated by FastAPI and a typed TypeScript client generated from it.
+• One consistent error envelope; cursor pagination everywhere; idempotency keys on create endpoints.
+• Rate limits per user and per IP, stricter for new accounts.
+• Document every WebSocket event type with its payload schema.
+• Present endpoints as a table: method, path, auth, purpose.
+Scale, performance and reliability
+Design for these targets (edit them to suit) and show what breaks first at 10× and 100× launch load, with the fix for each.
+Target
+Value
+Launch load
+[1k] monthly active users
+Design load
+[100k] monthly active users, [5k] new videos a day
+Feed and listing reads
+p95 under [200 ms] at the API
+First video frame
+under [1.5 s] on 4G
+Message delivery
+under [1 s] end to end
+Upload to live
+under [2 min] before review
+Availability
+[99.9%]
+Requirements:
+• Stateless API behind Nginx; scale API and workers independently.
+• PgBouncer from day one; a read replica when reads demand it.
+• Redis caching with explicit invalidation rules written down per key.
+• Every slow or external call goes to a background job.
+• Graceful degradation: if ranking or cache fails, the feed falls back to plain recency.
+• Daily backups with point-in-time recovery, tested restores.
+• Health and readiness checks on every container.
+• Dashboards and alerts for the upload pipeline, queue depth, WebSocket connections and error rates.
+• Estimate monthly storage, CDN egress and total cost at launch and at design load. Video egress will dominate, so show the maths.
+Trust, safety and compliance
+Scams and fake listings kill used-car marketplaces, so treat trust and safety as a core module, not a later add-on.
+• Verification: SMS OTP required to post or message; a verified badge for dealers; sellers must be 18+.
+• Content rights: uploaders confirm they own the video and the item. The platform hosts no scraped or third-party content.
+• Automated moderation: scan sampled video frames and listing text for prohibited content and contact details; route hits to human review.
+• Fraud signals: rate limits on new accounts, duplicate-video detection by perceptual hash, price-anomaly flags, scam-pattern detection in chat, warning banners.
+• Moderation tooling: an admin queue with actions (approve, remove, suspend), reasons recorded, notifications to the affected user, and an appeal path.
+• Privacy (GDPR): data minimisation, consent for non-essential analytics, export and delete-my-data endpoints, retention periods for messages, videos and events, EU data residency.
+• EU Digital Services Act: list which obligations apply to a small marketplace at launch (such as notice-and-action reporting and statements of reasons for removals), which arrive as it grows, and how the design meets each. Flag this section for legal review.
+Code quality and repo structure
+Readable beats clever: someone new should find any feature's code in under a minute.
+• Monorepo: /backend, /frontend, /infra, /docs.
+• Backend layering per module: router (HTTP only) → service (business logic) → repository (database) → models and schemas. No database calls in routers; dependencies injected with FastAPI Depends.
+• Frontend by feature: features/feed, features/listing, features/chat, features/viewings, plus shared components, hooks and the generated API client.
+• Config: pydantic-settings, environment variables, no secrets in the repo.
+• Typing and linting: mypy strict and Ruff on the backend; TypeScript strict, ESLint and Prettier on the frontend.
+• Tests: pytest unit tests on services; integration tests against real Postgres and Redis in containers; Vitest and React Testing Library; one Playwright end-to-end test for upload → feed → message → viewing.
+• CI: lint, typecheck, test, migration check and image build on every pull request.
+• Docs: README with one-command local setup (docker compose up), and a short architecture decision record for each major choice.
+• Style: small functions, descriptive names, docstrings on public service methods, no abstraction until the second use case.
+Deliverables, in order
+Produce these in order. Stop after items 2, 4 and 9 and wait for my go-ahead.
+1. Assumptions and open questions, one line each.
+2. Architecture: Mermaid component diagram and one short paragraph per component.
+3. Sequence diagrams: video upload pipeline, sending a message, proposing a viewing.
+4. Database schema as SQL DDL with indexes and their reasons.
+5. API spec: endpoint table and WebSocket event types.
+6. Feed ranking design: the MVP heuristic and the path to a learned model.
+7. Scaling plan: what breaks at 10× and 100×, the fix for each, and monthly cost estimates.
+8. Trust, safety and compliance plan.
+9. Repo tree and scaffold: docker-compose (Nginx, API, worker, Postgres, Redis); FastAPI app with auth and listings working end to end; React app with the feed screen playing seeded videos.
+10. Phased roadmap: MVP, v1 and scale, with the main risk in each phase.
