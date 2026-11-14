@@ -18,7 +18,7 @@
   --ink: #172c24;
   --forest: #245645;
   --lime: #dff47a;
-  --muted: #66766d;
+  --muted: #526359;
   --line: #e0e7e1;
   --surface: #fff;
   --soft: #edf3ed;
@@ -583,6 +583,7 @@ textarea:focus-visible,
   border-radius: 2px;
 }
 .page-heading h1 {
+  text-wrap: balance;
   margin: 12px 0 11px;
   font-size: clamp(30px, 3vw, 42px);
   line-height: 1.18;
@@ -593,6 +594,7 @@ textarea:focus-visible,
   color: #6a8066;
 }
 .page-heading p {
+  text-wrap: pretty;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.8;
@@ -967,7 +969,7 @@ textarea:focus-visible,
 }
 .feed-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 410px) minmax(290px, 390px);
+  grid-template-columns: minmax(300px, 460px) minmax(290px, 390px);
   align-items: start;
   justify-content: center;
   gap: 38px;
@@ -983,10 +985,10 @@ textarea:focus-visible,
   align-items: center;
   gap: 10px;
   margin: 0 2px 13px;
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  font-weight: 800;
-  color: #67805e;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 .feed-label span {
   display: flex;
@@ -994,8 +996,8 @@ textarea:focus-visible,
   gap: 6px;
 }
 .feed-label span:last-child {
-  color: #758375;
-  font-size: 10px;
+  color: var(--muted);
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0;
 }
@@ -1006,7 +1008,7 @@ textarea:focus-visible,
   border-radius: 50%;
 }
 .feed-scroll {
-  height: clamp(430px, calc(100svh - 410px), 680px);
+  height: clamp(430px, calc(100svh - 350px), 720px);
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   scrollbar-width: none;
@@ -1099,20 +1101,21 @@ textarea:focus-visible,
   left: 18px;
   right: 18px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   align-items: center;
 }
 .reel-badge {
+  margin-right: auto;
   display: inline-flex;
   align-items: center;
   gap: 7px;
   padding: 8px 9px;
   border-radius: 7px;
-  background: #17342680;
+  background: #173426e6;
   border: 1px solid #ffffff25;
   color: #f3f7ef;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 750;
   letter-spacing: 0.7px;
   backdrop-filter: blur(8px);
@@ -1125,8 +1128,8 @@ textarea:focus-visible,
 .clip-time {
   font-size: 10px;
   font-weight: 600;
-  color: #e3ece2;
-  background: #18302566;
+  color: #fff;
+  background: #183025e6;
   padding: 7px 9px;
   border-radius: 7px;
 }
@@ -1153,9 +1156,9 @@ textarea:focus-visible,
 }
 .video-status {
   position: absolute;
-  top: 42%;
+  top: 64px;
   left: 20px;
-  right: 20px;
+  right: 78px;
   background: #11291fe8;
   border: 1px solid #668269;
   border-radius: 12px;
@@ -1163,6 +1166,26 @@ textarea:focus-visible,
   font-size: 12px;
   line-height: 1.7;
   text-align: center;
+}
+.video-status p {
+  margin: 0 0 12px;
+}
+.video-status p:last-child {
+  margin-bottom: 0;
+}
+.video-buffering {
+  top: 42%;
+  right: 20px;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+.video-buffering .spinner {
+  width: 20px;
+  height: 20px;
+  margin: 0;
 }
 .reel-actions {
   position: absolute;
@@ -3032,14 +3055,14 @@ input[type='file']::file-selector-button {
   }
   .feed-label {
     margin-bottom: 11px;
-    font-size: 8px;
-    letter-spacing: 1.2px;
+    font-size: 12px;
+    letter-spacing: 0;
   }
   .feed-label span:last-child {
-    font-size: 9px;
+    font-size: 11px;
   }
   .feed-scroll {
-    height: clamp(320px, calc(100svh - 530px), 570px);
+    height: clamp(400px, calc(100svh - 380px), 660px);
     border-radius: 18px;
   }
   .feed-footer {
@@ -3078,7 +3101,7 @@ input[type='file']::file-selector-button {
     right: 15px;
   }
   .reel-badge {
-    font-size: 7px;
+    font-size: 11px;
     padding: 7px 8px;
   }
   .clip-time {

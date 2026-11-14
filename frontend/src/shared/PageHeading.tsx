@@ -7,7 +7,7 @@ export function PageHeading({
   action,
   className = '',
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: ReactNode;
   description: string;
   action?: ReactNode;
@@ -16,10 +16,12 @@ export function PageHeading({
   return (
     <div className={`page-heading ${className}`}>
       <div>
-        <div className="eyebrow">
-          <span className="eyebrow-line" />
-          {eyebrow}
-        </div>
+        {eyebrow && (
+          <div className="eyebrow">
+            <span className="eyebrow-line" />
+            {eyebrow}
+          </div>
+        )}
         <h1>{title}</h1>
         <p>{description}</p>
       </div>

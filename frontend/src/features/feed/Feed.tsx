@@ -85,19 +85,8 @@ export function Feed(props: Props) {
     <>
       <PageHeading
         className="discovery-heading"
-        eyebrow="A BETTER WAY TO BUY LOCAL"
-        title={
-          <>
-            Your next find, <span>in motion.</span>
-          </>
-        }
-        description="Real videos. Local sellers. A proper look before you meet."
-        action={
-          <div className="heading-stamp">
-            <span className="live-dot" />
-            Exploring Dublin
-          </div>
-        }
+        title="See what’s for sale near you."
+        description="Watch video tours of cars, homes and local finds in Dublin. Message the seller when you’re ready."
       />
       <div className="discovery-search-row">
         <KeywordSearch key={filters.q} value={filters.q} submit={(q) => update({ q })} />
@@ -336,7 +325,6 @@ export function Feed(props: Props) {
       )}
       <div className="loop-toolbar">
         <TuneFeed requireAuth={props.requireAuth} />
-        <span>Fresh finds. A little more you.</span>
       </div>
       <FeedResults
         key={searchParams(filters).toString()}
@@ -517,10 +505,7 @@ function FeedResults({
       <div className="feed-layout">
         <div className="feed-column">
           <div className="feed-label">
-            <span>
-              <i />
-              THE LOCAL LOOP
-            </span>
+            <span>Video listings</span>
             <span>
               {listings.length
                 ? `${Math.min(active + 1, listings.length)} of ${listings.length} loaded`
@@ -552,7 +537,7 @@ function FeedResults({
             {query.isPending && (
               <div className="feed-empty" role="status">
                 <div className="spinner" />
-                <h2>Finding your next find…</h2>
+                <h2>Loading local listings…</h2>
               </div>
             )}
             {query.isError && !listings.length && (

@@ -58,6 +58,7 @@ install_error_handlers(app)
 async def observe(request: Request, call_next: Any) -> Response:
     request.state.request_id = str(uuid4())
     start = time.perf_counter()
+    response: Response | None = None
     if request.url.path.startswith("/api/v1") and request.method not in {"GET", "HEAD", "OPTIONS"}:
         try:
             allowed = await rate_limit(
@@ -68,7 +69,7 @@ async def observe(request: Request, call_next: Any) -> Response:
         if not allowed:
             from fastapi.responses import JSONResponse
 
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=429,
                 content={
                     "error": {
@@ -78,14 +79,19 @@ async def observe(request: Request, call_next: Any) -> Response:
                     }
                 },
             )
-    with trace.get_tracer("motorloop.http").start_as_current_span(f"{request.method} request"):
-        response: Response = await call_next(request)
+    if response is None:
+        with trace.get_tracer("motorloop.http").start_as_current_span(f"{request.method} request"):
+            response = await call_next(request)
     route = getattr(request.scope.get("route"), "path", "unmatched")
     elapsed = time.perf_counter() - start
     REQUESTS.labels(request.method, route, str(response.status_code)).inc()
     LATENCY.labels(route).observe(elapsed)
     response.headers["X-Request-ID"] = request.state.request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if response.status_code == 429:
+        response.headers["Retry-After"] = "60"
     if request.url.path.startswith("/api"):
         response.headers["Cache-Control"] = "no-store"
     log.info(

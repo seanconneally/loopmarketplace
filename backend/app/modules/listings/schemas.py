@@ -2,8 +2,9 @@ from datetime import datetime
 from typing import Any, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.core.media_urls import current_media_url
 from app.modules.listings.categories import ATTRIBUTE_MODELS, Category
 from app.modules.media.schemas import OwnerMediaView
 from app.modules.users.schemas import SellerView
@@ -47,6 +48,8 @@ class ListingCreate(BaseModel):
 
 
 class ListingView(BaseModel):
+    _current_media_url = field_validator("playback_url", "poster_url")(current_media_url)
+
     id: UUID
     title: str
     description: str

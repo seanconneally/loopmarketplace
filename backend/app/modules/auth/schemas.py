@@ -8,7 +8,7 @@ class OtpRequest(BaseModel):
 
 
 class OtpVerify(OtpRequest):
-    code: str = Field(pattern=r"^\d{6}$")
+    code: str = Field(pattern=r"^[0-9]{6}$")
 
 
 class ChallengeView(BaseModel):

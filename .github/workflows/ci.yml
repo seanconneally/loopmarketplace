@@ -39,6 +39,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: docker compose up -d --build --wait --wait-timeout 300
+      - name: Gateway security and playback regression checks
+        run: node scripts/check-security.mjs
       - run: pip install -e './backend[dev]'
       - name: Real PostgreSQL/Redis integration and migration drift
         working-directory: backend

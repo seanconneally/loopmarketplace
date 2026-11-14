@@ -42,9 +42,6 @@ export function ListingDetails({
   const [busy, setBusy] = useState(false);
   return (
     <aside className="listing-panel">
-      <div className="panel-kicker">
-        THE DETAILS <span>↗</span>
-      </div>
       <div className="listing-title">
         <div>
           <h2>{listing.title}</h2>
@@ -177,12 +174,6 @@ export function ListingDetails({
         <Flag size={13} />
         Report this listing
       </button>
-      <div className="detail-footnote">
-        A little more real.
-        <br />
-        <span>A lot more local.</span>
-        <span className="mini-brand">l↗</span>
-      </div>
       {report && (
         <Modal title="Report this listing" close={() => setReport(false)}>
           <form

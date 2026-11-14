@@ -20,6 +20,9 @@ from app.core.config import settings
 from app.core.errors import DomainError, require
 
 PART_SIZE = 8 * 1024 * 1024
+# Uploaded videos may never cause a decoder to fetch URLs or parse playlists.
+# These are input options, placed immediately before each untrusted input.
+VIDEO_INPUT_OPTIONS = ["-protocol_whitelist", "file", "-format_whitelist", "mov"]
 
 
 def storage(public: bool = False) -> "S3Client":
@@ -237,6 +240,7 @@ class LocalVideoProvider:
                     "-show_streams",
                     "-of",
                     "json",
+                    *VIDEO_INPUT_OPTIONS,
                     str(source),
                 ],
                 capture_output=True,
@@ -273,6 +277,7 @@ class LocalVideoProvider:
                 rendition.mkdir()
                 run_ffmpeg(
                     [
+                        *VIDEO_INPUT_OPTIONS,
                         "-i",
                         str(source),
                         "-map",
@@ -327,6 +332,7 @@ class LocalVideoProvider:
                 [
                     "-ss",
                     "1",
+                    *VIDEO_INPUT_OPTIONS,
                     "-i",
                     str(source),
                     "-frames:v",
@@ -338,6 +344,7 @@ class LocalVideoProvider:
             )
             run_ffmpeg(
                 [
+                    *VIDEO_INPUT_OPTIONS,
                     "-i",
                     str(source),
                     "-vf",

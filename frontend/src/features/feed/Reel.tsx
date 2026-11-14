@@ -3,7 +3,17 @@ import { listingSummary } from '../listing/categories';
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import { Link, useLocation } from 'react-router-dom';
-import { Bookmark, MapPin, MessageCircle, Pause, Play, Volume2, VolumeX } from 'lucide-react';
+import {
+  BadgeCheck,
+  Bookmark,
+  MapPin,
+  MessageCircle,
+  Pause,
+  Play,
+  RotateCw,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import { euros, type Listing } from '../../api/client';
 import { useAuth } from '../../shared/Auth';
 
@@ -33,6 +43,8 @@ export function Reel({
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [failed, setFailed] = useState(false);
+  const [buffering, setBuffering] = useState(true);
+  const [attempt, setAttempt] = useState(0);
   const activeCallback = useRef(onActive);
   activeCallback.current = onActive;
 
@@ -54,6 +66,8 @@ export function Reel({
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !listing.playback_url || !nearby) return;
+    setFailed(false);
+    setBuffering(true);
     let hls: Hls | undefined;
     if (listing.playback_url.includes('.m3u8') && Hls.isSupported()) {
       hls = new Hls({
@@ -78,7 +92,7 @@ export function Reel({
     };
     // Visibility changes must not recreate the current decoder; nearby controls its lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listing.playback_url, nearby]);
+  }, [listing.playback_url, nearby, attempt]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -89,7 +103,7 @@ export function Reel({
     }
     if (visible && !paused) void video.play().catch(() => setPaused(true));
     else video.pause();
-  }, [visible, paused, nearby]);
+  }, [visible, paused, nearby, attempt]);
 
   useEffect(() => {
     if (!visible || !auth.user?.analytics_consent) return;
@@ -162,6 +176,14 @@ export function Reel({
         loop
         playsInline
         preload={nearby ? 'metadata' : 'none'}
+        aria-label={`Video tour of ${listing.title}`}
+        onWaiting={() => setBuffering(true)}
+        onLoadStart={() => setBuffering(true)}
+        onCanPlay={() => setBuffering(false)}
+        onPlaying={() => {
+          setBuffering(false);
+          setFailed(false);
+        }}
         onError={() => setFailed(true)}
         onTimeUpdate={(event) => {
           const video = event.currentTarget;
@@ -170,10 +192,11 @@ export function Reel({
       />
       <div className="reel-shade" />
       <div className="reel-top">
-        <span className="reel-badge">
-          <span className="live-dot" />
-          {listing.seller.dealer_verified ? 'VERIFIED DEALER' : 'LOCAL SELLER'}
-        </span>
+        {listing.seller.dealer_verified && (
+          <span className="reel-badge">
+            <BadgeCheck size={14} /> Verified dealer
+          </span>
+        )}
         <span className="clip-time">{Math.round(listing.duration || 15)}s tour</span>
       </div>
       <button
@@ -183,8 +206,26 @@ export function Reel({
       >
         {paused ? <Play size={30} fill="currentColor" /> : <Pause size={25} />}
       </button>
-      {failed && (
-        <div className="video-status">Video unavailable. You can still view the listing.</div>
+      {visible && buffering && !paused && !failed && listing.playback_url && (
+        <div className="video-status video-buffering" role="status">
+          <span className="spinner" aria-hidden="true" /> Loading video…
+        </div>
+      )}
+      {(failed || !listing.playback_url) && (
+        <div className="video-status" role="status">
+          <p>Video unavailable. You can still read the advert.</p>
+          {listing.playback_url && (
+            <button
+              className="button"
+              onClick={() => {
+                setPaused(false);
+                setAttempt((value) => value + 1);
+              }}
+            >
+              <RotateCw size={16} /> Retry video
+            </button>
+          )}
+        </div>
       )}
       <div className="reel-actions">
         <button
@@ -192,9 +233,11 @@ export function Reel({
           aria-label={listing.saved ? 'Unsave listing' : 'Save listing'}
           className={listing.saved ? 'is-saved' : ''}
           disabled={saving}
+          aria-busy={saving}
+          aria-pressed={listing.saved}
         >
           <Bookmark size={22} fill={listing.saved ? 'currentColor' : 'none'} />
-          <span>Save</span>
+          <span>{saving ? 'Saving…' : listing.saved ? 'Saved' : 'Save'}</span>
         </button>
         <button
           onClick={onMessage}
@@ -206,6 +249,7 @@ export function Reel({
         </button>
         <button
           onClick={() => setMuted(!muted)}
+          aria-pressed={!muted}
           disabled={!listing.has_audio}
           aria-label={
             !listing.has_audio ? 'Video has no audio' : muted ? 'Unmute video' : 'Mute video'
@@ -230,10 +274,7 @@ export function Reel({
           </Link>
         </h2>
         <p>{listingSummary(listing)}</p>
-        <div className="reel-price">
-          {euros(listing.price_cents)}
-          <span>See it. Love it. Make it yours.</span>
-        </div>
+        <div className="reel-price">{euros(listing.price_cents)}</div>
       </div>
       <div className="video-progress">
         <span style={{ width: `${progress}%` }} />

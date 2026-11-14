@@ -116,6 +116,8 @@ class AuthService:
                 audience="motorloop-web",
                 options={"require": ["exp", "iat", "sub", "sid", "jti"]},
             )
+            if not all(isinstance(claims.get(key), str) for key in ("sub", "sid", "jti")):
+                raise ValueError("Invalid identity claims")
             user_id, family = UUID(claims["sub"]), UUID(claims["sid"])
         except (jwt.InvalidTokenError, ValueError, KeyError) as exc:
             raise DomainError(401, "invalid_token", "Sign in again.") from exc

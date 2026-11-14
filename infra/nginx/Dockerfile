@@ -7,5 +7,6 @@ RUN npm run build
 
 FROM nginx:1.28-alpine
 COPY infra/nginx/nginx.conf /etc/nginx/conf.d/default.conf
+COPY infra/nginx/security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=web /web/dist /usr/share/nginx/html
 HEALTHCHECK --interval=15s --timeout=3s CMD wget -q -O /dev/null http://127.0.0.1/healthz || exit 1

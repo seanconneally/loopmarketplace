@@ -34,6 +34,8 @@ Background start: `docker compose up -d --build`. Stop: `docker compose down`. D
 
 All published development ports bind to loopback. Compose works without copying `.env.example`; never reuse its development credentials publicly. `APP_ENV=production` intentionally refuses startup until production adapters and release controls are implemented.
 
+If port 8080 is occupied, set `WEB_PORT=8088` in a local `.env` file and open `http://localhost:8088`. Compose derives the application and playback origins from that port unless explicitly overridden.
+
 ## Try it
 
 1. Browse the mixed FYP or filter by category, budget and distance; car filters appear in Cars; save a listing after signing in.
@@ -46,6 +48,8 @@ All published development ports bind to loopback. Compose works without copying 
 Discovery includes keyword search, category tabs, inventory-derived car makes, custom price/year/mileage filters, fuel/gearbox filters and recommended/newest/price sorting. Search settings are kept in the URL. Open **Full advert** or tap a video title for a direct advert page; **Share advert** copies its link. Saved listings can be reopened, removed and paged through. See the [discovery and sharing guide](docs/discovery-sharing.md).
 
 The complete interface has a refreshed forest/lime design, self-hosted Manrope typography, consistent cards/forms/dialogs and responsive layouts across buyer, seller, dealer and moderator pages. See the [UI refresh and screenshots](docs/ui-refresh.md). Existing video posters remain; photos are deferred.
+
+The [security and UI checklist implementation](docs/security-and-ui.md) records gateway hardening, safer video processing, authentication checks and a simpler discovery feed with playback loading/retry states. Run `node scripts/check-security.mjs` against the running local stack to verify headers, blocked private paths and published video playback.
 
 **My listings** is the seller dashboard at [localhost:8080/my-listings](http://localhost:8080/my-listings). It includes saved drafts and status filters, editing prices/details, pausing/resuming approved adverts, marking sold, and retrying or replacing failed videos. On mobile, open **Account → Manage your adverts**. See the [seller and upload guide](docs/seller-uploads.md).
 

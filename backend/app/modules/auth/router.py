@@ -24,6 +24,7 @@ def set_refresh(response: Response, token: str) -> None:
 
 @router.post("/otp/request", response_model=ChallengeView)
 async def challenge(data: OtpRequest, request: Request, session: Session) -> ChallengeView:
+    same_origin(request)
     return await AuthService(session).challenge(
         data.phone, request.client.host if request.client else "unknown"
     )

@@ -17,6 +17,7 @@ export function SignIn({ close }: { close: () => void }) {
   const [busy, setBusy] = useState(false);
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError('');
     try {
@@ -57,7 +58,7 @@ export function SignIn({ close }: { close: () => void }) {
           </span>
           <p>
             {challenge === null
-              ? 'Save the ones you love. Speak to the seller. Find your next find.'
+              ? 'Sign in to save listings, message sellers or sell an item.'
               : 'Enter your code and tell us a little about yourself.'}
           </p>
         </div>
@@ -66,7 +67,7 @@ export function SignIn({ close }: { close: () => void }) {
         <span className="complete" />
         <span className={challenge === null ? '' : 'complete'} />
       </div>
-      <form onSubmit={(event) => void submit(event)} className="form-stack">
+      <form onSubmit={(event) => void submit(event)} className="form-stack" aria-busy={busy}>
         <label>
           Phone number
           <input

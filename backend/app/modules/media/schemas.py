@@ -1,7 +1,9 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.core.media_urls import current_media_url
 
 
 class UploadRequest(BaseModel):
@@ -40,6 +42,7 @@ class UploadComplete(BaseModel):
 
 class MediaView(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    _current_media_url = field_validator("playback_url", "poster_url")(current_media_url)
     id: UUID
     listing_id: UUID
     status: str
