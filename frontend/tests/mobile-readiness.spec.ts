@@ -39,6 +39,7 @@ test('mobile video controls, offline form recovery and constrained dialog viewpo
   const video = page.locator('video').first();
   await expect(video).toHaveAttribute('playsinline', '');
   if (info.project.name === 'android-chromium') {
+    await video.scrollIntoViewIfNeeded();
     await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(0);
     await page.getByRole('button', {name:'Pause video'}).first().click();
     await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).paused)).toBe(true);

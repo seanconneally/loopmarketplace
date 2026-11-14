@@ -1,5 +1,9 @@
 # Recovery and mobile readiness
 
+The 14 November [pilot-readiness update](pilot-readiness.md) adds feed-continuation
+coverage, larger demo inventory and eight passing browser-profile checks. Physical
+phone acceptance remains pending; no device was available in that session.
+
 Implemented locally on 3 November 2026. Changes remain uncommitted and unpushed.
 
 ## Crash and session recovery

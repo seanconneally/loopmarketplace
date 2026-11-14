@@ -8,6 +8,8 @@ The default **For you** feed mixes all listings. **Cars**, **Homes** and **Golf 
 
 The optional **personal loop** learns while you scroll: completion/skips, replays, saves and seller conversations influence the next unseen page. Category-specific price preferences prevent golf-club prices skewing home recommendations. Loaded pages remain stable on retries. See [recommendations and video uploads](docs/personal-loop.md).
 
+At the end of a set, **Check for new listings** keeps the current adverts and appends unseen matches. The optional [pilot catalogue and phone-testing guide](docs/pilot-readiness.md) adds 24 explicitly synthetic adverts across four categories, for 30 original/demo listings in a fresh environment.
+
 This folder contains **the ten original design deliverables and a runnable local development scaffold**. The original design began with cars; [the current marketplace scope](docs/marketplace.md) extends that foundation. Real provider integrations, privacy workflows and production operations remain explicit [release gates](docs/09-scaffold.md).
 
 ## Run locally

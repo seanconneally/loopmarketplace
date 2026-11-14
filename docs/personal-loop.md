@@ -18,6 +18,26 @@ A session has at most 150 candidate IDs. Redis stores ordered IDs, committed pag
 
 Signed cursors bind account, exact normalized filters, preference version and snapshot. Reset/consent changes invalidate old personalized continuation. Expiry returns an actionable refresh error. A fresh request falls back to SQL recency if Redis is unavailable; an interrupted existing ranked session requires refresh. Explicit newest/price sorting retains SQL keyset pagination. The candidate/history bounds are deliberate pilot limits, not an unlimited global recommendation corpus.
 
+## Checking for new listings
+
+The last loaded advert exposes an explicit end-of-set card. **Check for new listings**
+starts a fresh search with the same filters and skips IDs already loaded in this view.
+It can look beyond a first page of repeats, appends only unseen matches and jumps to
+the first new advert. The old set stays available through Previous/Next. If there
+are no unseen matches, it stays in place and says so; it does not silently restart
+the same videos. Browse all listings clears filters when a broader search is wanted.
+
+Refresh work is bounded to 40 pages / 150 inspected items and a 15-second deadline.
+Failures show a retryable message. Filter/account/preference changes cancel an in-flight
+check so a stale response cannot affect the new view. Known IDs are held in the active
+query only, not added to persistent browser tracking. Regular scroll pagination keeps
+its existing deduplication and stable committed-page rules. The original manual refresh
+is still available before the end of a set and intentionally starts over.
+
+Previous/Next and arrow-key navigation now update the selected advert directly, even
+when a phone user has scrolled the outer page below the video. Playback still follows
+actual visibility.
+
 ## Playback and privacy controls
 
 Watch time uses actual foreground media advancement, excluding pause and buffering. Replays are capped at two in a receipt. Batches use stable UUIDs for safe retry, a bounded in-memory queue and a 60-second freshness limit. They are not persisted in local storage. Account changes, reset and opt-out clear queued history. Client timestamps are validated; receipts older than the server reset cutoff are ignored. The server rechecks consent and accepts only playback signals from analytics; saves/messages cannot be forged through that endpoint.

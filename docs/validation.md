@@ -1,5 +1,17 @@
 # Validation record
 
+## 14 November 2026 — pilot follow-up
+
+Added 24 synthetic adverts with generated HLS videos; a second loader run added zero.
+Frontend: 37 unit/component tests, lint, formatting and production build passed.
+Backend: 32 unit tests passed on Windows with the ffprobe-only case skipped; Ruff
+and strict typing passed. The mobile suite passed all eight Chromium/WebKit profile
+checks, including preservation of old listings, skip-over-repeat refresh and reliable
+Previous navigation. Physical phones were unavailable and are not claimed as tested.
+See [pilot scope and remaining acceptance](pilot-readiness.md).
+
+## Earlier validation
+
 Validated locally on 3 November 2026. These checks establish the scaffold's local behaviour, not production SLOs or legal compliance.
 
 | Check | Result |

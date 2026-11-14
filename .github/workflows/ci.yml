@@ -52,11 +52,12 @@ jobs:
         working-directory: frontend
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
           mkdir -p tests/fixtures
           docker compose exec -T api python scripts/make_test_video.py /tmp/walkaround.mp4
           docker compose cp api:/tmp/walkaround.mp4 tests/fixtures/walkaround.mp4
           npm run test:e2e
+          npm run test:mobile
       - if: failure()
         run: docker compose logs --tail=150
       - if: always()

@@ -57,16 +57,20 @@ export async function restoreSession(): Promise<AuthResult | null> {
   return refreshing;
 }
 
-export async function fetchFeed(query: FeedQuery, retry = true): Promise<FeedPage> {
+export async function fetchFeed(
+  query: FeedQuery,
+  retry = true,
+  signal?: AbortSignal,
+): Promise<FeedPage> {
   const usedToken = token;
-  const result = await generatedClient.GET('/api/v1/feed', { params: { query } });
+  const result = await generatedClient.GET('/api/v1/feed', { params: { query }, signal });
   if (result.data) return result.data;
   if (
     result.response.status === 401 &&
     retry &&
     ((token && token !== usedToken) || (await restoreSession()))
   )
-    return fetchFeed(query, false);
+    return fetchFeed(query, false, signal);
   throw new Error(result.error?.error.message || 'Could not load the local feed.');
 }
 

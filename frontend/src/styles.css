@@ -1073,6 +1073,32 @@ textarea:focus-visible,
   gap: 12px;
   margin-top: 15px;
 }
+.feed-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.feed-end h2,
+.feed-end p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.feed-end h2 {
+  font-size: 18px;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+.feed-end p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
 
 /* Video and advert details */
 .reel {

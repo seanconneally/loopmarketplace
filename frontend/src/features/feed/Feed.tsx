@@ -2,10 +2,16 @@ import { flushSignals } from './signals';
 import { categories } from '../listing/categories';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ArrowUp, RotateCw, Search, SlidersHorizontal, X } from 'lucide-react';
-import { euros, fetchFeed, request, type Listing } from '../../api/client';
+import { euros, fetchFeed, request, type FeedPage, type Listing } from '../../api/client';
+import { findUnseenPage } from './refresh';
 import { useAuth } from '../../shared/Auth';
 import { Reel } from './Reel';
 import { TuneFeed } from './TuneFeed';
@@ -378,6 +384,11 @@ function FeedResults({
     [saving, setSaving] = useState('');
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [lastHidden, setLastHidden] = useState<Listing | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [freshNotice, setFreshNotice] = useState('');
+  const refreshGeneration = useRef(0);
+  const refreshController = useRef<AbortController | null>(null);
+  const jumpTo = useRef<number | null>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(650);
   const queryKey = [
@@ -386,6 +397,18 @@ function FeedResults({
     auth.user?.id,
     auth.user?.analytics_consent,
   ];
+  const identityKey = JSON.stringify(queryKey);
+  useEffect(() => {
+    refreshGeneration.current += 1;
+    setChecking(false);
+    setFreshNotice('');
+    jumpTo.current = null;
+    return () => {
+      refreshGeneration.current += 1;
+      refreshController.current?.abort();
+      refreshController.current = null;
+    };
+  }, [identityKey]);
   const query = useInfiniteQuery({
     queryKey,
     initialPageParam: '',
@@ -409,6 +432,69 @@ function FeedResults({
     overscan: 2,
   });
   const current = listings[Math.min(active, listings.length - 1)] || listings[0];
+  function goTo(index: number) {
+    const next = Math.max(0, Math.min(listings.length - 1, index));
+    setActive(next);
+    virtualizer.scrollToIndex(next, { align: 'start' });
+  }
+  const atEnd =
+    listings.length > 0 && active >= listings.length - 1 && !query.hasNextPage && !query.isFetching;
+  useEffect(() => {
+    if (jumpTo.current !== null && listings.length > jumpTo.current) {
+      const index = jumpTo.current;
+      jumpTo.current = null;
+      virtualizer.measure();
+      virtualizer.scrollToIndex(index, { align: 'start' });
+      setActive(index);
+    }
+  }, [listings.length, virtualizer]);
+  async function checkForNew() {
+    if (checking || refreshController.current) return;
+    const generation = refreshGeneration.current;
+    const controller = new AbortController();
+    refreshController.current = controller;
+    const timeout = window.setTimeout(
+      () => controller.abort(new DOMException('Refresh timed out', 'TimeoutError')),
+      15000,
+    );
+    setChecking(true);
+    setFreshNotice('');
+    try {
+      await flushSignals();
+      const known = new Set(query.data?.pages.flatMap((page) => page.items.map((item) => item.id)));
+      const page = await findUnseenPage(feedQuery(filters), known, undefined, controller.signal);
+      if (generation !== refreshGeneration.current) return;
+      if (!page.items.length) {
+        setFreshNotice('No new matches in the latest set. Your current listings are still here.');
+        return;
+      }
+      jumpTo.current = listings.length;
+      client.setQueryData<InfiniteData<FeedPage, string>>(
+        queryKey,
+        (previous) =>
+          previous && {
+            pages: [...previous.pages, page],
+            pageParams: [...previous.pageParams, ''],
+          },
+      );
+      setFreshNotice(
+        `${page.items.length} new ${page.items.length === 1 ? 'listing' : 'listings'} added.`,
+      );
+    } catch (problem) {
+      if (generation === refreshGeneration.current)
+        setFreshNotice(
+          navigator.onLine === false
+            ? 'You’re offline. Reconnect to check for new listings.'
+            : (problem as Error).name === 'TimeoutError'
+              ? 'Checking took too long. Please try again.'
+              : (problem as Error).message,
+        );
+    } finally {
+      window.clearTimeout(timeout);
+      if (refreshController.current === controller) refreshController.current = null;
+      if (generation === refreshGeneration.current) setChecking(false);
+    }
+  }
   useEffect(() => {
     const element = scroll.current;
     if (!element) return;
@@ -525,13 +611,7 @@ function FeedResults({
               )
                 return;
               event.preventDefault();
-              virtualizer.scrollToIndex(
-                Math.max(
-                  0,
-                  Math.min(listings.length - 1, active + (event.key === 'ArrowDown' ? 1 : -1)),
-                ),
-                { align: 'start' },
-              );
+              goTo(active + (event.key === 'ArrowDown' ? 1 : -1));
             }}
           >
             {query.isPending && (
@@ -590,7 +670,7 @@ function FeedResults({
             </div>
           </div>
           <div className="feed-footer">
-            <span>
+            <span role="status">
               {query.isFetchingNextPage
                 ? 'Finding more listings…'
                 : 'See something you like? Start a conversation.'}
@@ -600,7 +680,7 @@ function FeedResults({
                 className="icon-button"
                 aria-label="Previous listing"
                 disabled={active === 0 || !listings.length}
-                onClick={() => virtualizer.scrollToIndex(active - 1, { align: 'start' })}
+                onClick={() => goTo(active - 1)}
               >
                 <ArrowUp size={17} />
               </button>
@@ -608,12 +688,36 @@ function FeedResults({
                 className="icon-button"
                 aria-label="Next listing"
                 disabled={active >= listings.length - 1}
-                onClick={() => virtualizer.scrollToIndex(active + 1, { align: 'start' })}
+                onClick={() => goTo(active + 1)}
               >
                 <ArrowDown size={17} />
               </button>
             </div>
           </div>
+          {atEnd && (
+            <section className="feed-end" aria-label="End of listings" aria-busy={checking}>
+              <h2>You’ve reached the end of this set.</h2>
+              <p>Check for fresh adverts, or revisit the ones you’ve seen.</p>
+              <button
+                className="button dark"
+                disabled={checking}
+                onClick={() => void checkForNew()}
+              >
+                <RotateCw size={16} aria-hidden="true" />
+                {checking ? 'Checking for new listings…' : 'Check for new listings'}
+              </button>
+              {searchParams(filters).size > 0 && (
+                <button className="text-button" disabled={checking} onClick={reset}>
+                  Browse all listings
+                </button>
+              )}
+            </section>
+          )}
+          {freshNotice && (
+            <p className="notice" role="status">
+              {freshNotice}
+            </p>
+          )}
           <div className="feed-context-actions">
             {current && current.seller.id !== auth.user?.id && (
               <button
@@ -624,16 +728,18 @@ function FeedResults({
                 Not interested
               </button>
             )}
-            <button
-              className="text-button"
-              onClick={() => {
-                setActive(0);
-                scroll.current?.scrollTo({ top: 0 });
-                void client.resetQueries({ queryKey, exact: true });
-              }}
-            >
-              Refresh your loop
-            </button>
+            {!atEnd && (
+              <button
+                className="text-button"
+                onClick={() => {
+                  setActive(0);
+                  scroll.current?.scrollTo({ top: 0 });
+                  void client.resetQueries({ queryKey, exact: true });
+                }}
+              >
+                Refresh your loop
+              </button>
+            )}
           </div>
           {query.isFetchNextPageError && (
             <div className="notice feed-recovery" role="alert">
